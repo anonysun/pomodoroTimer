@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>뽀모도로 타이머</title>
+    <style>
+        /* 기본 폰트 및 레이아웃 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        :root {
+            /* 라이트 테마 색상 변수 */
+            --bg-color: #f4f4f5; /* 아주 연한 회색 */
+            --container-color: #ffffff; /* 흰색 */
+            --primary-color: #e0e7ff; /* 연한 남색 */
+            --accent-color: #4f46e5; /* 포인트 남색 */
+            --text-color: #1f2937; /* 진한 회색 */
+            --subtle-text-color: #6b7280; /* 연한 회색 */
+            --done-color: #9ca3af; /* 완료된 작업 색상 */
+            --border-color: #d1d5db;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        /* 메인 컨테이너 (타이머 + 작업 관리) */
+        .main-container, .task-container {
+            background-color: var(--container-color);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+            /* 높이를 동일하게 설정 */
+            height: 560px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-container {
+            width: 340px;
+            flex-shrink: 0;
+        }
+
+        h1, h2 {
+            margin-top: 0;
+            color: var(--text-color);
+        }
+        
+        h2 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* 캔버스 타이머 */
+        #timer-canvas-wrapper {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+        }
+
+        #timer-canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            cursor: pointer;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .status-display {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            height: 30px;
+            margin-bottom: 5px;
+        }
+
+        /* 컨트롤 버튼 */
+        .controls button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .controls button:hover:not(:disabled) {
+            background-color: #3730a3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.2);
+        }
+        .controls button:disabled {
+            background-color: #e5e7eb;
+            color: var(--done-color);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 작업 관리 영역 */
+        .task-container {
+            width: 340px;
+        }
+        
+        .task-input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #task-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            background-color: #f9fafb;
+            color: var(--text-color);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        #task-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        #add-task-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.5rem;
+            transition: background-color 0.3s;
+        }
+        #add-task-btn:hover {
+            background-color: #3730a3;
+        }
+        
+        .task-lists-container {
+            flex-grow: 1; /* 남은 공간을 모두 차지하도록 설정 */
+            overflow: hidden; /* 내부 스크롤을 위해 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .task-lists {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            text-align: left;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        .task-list-wrapper {
+            width: 48%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .task-list-wrapper h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            padding-left: 5px;
+            flex-shrink: 0;
+        }
+        
+        .task-list {
+            padding: 5px;
+            margin: 0 -5px;
+            list-style: none;
+            overflow-y: auto; /* 여기서 스크롤 */
+        }
+
+        .task-list li {
+            background-color: #f9fafb;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+            transition: background-color 0.3s;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .task-list li.current-task {
+            border-left-color: var(--accent-color);
+            font-weight: bold;
+            background-color: var(--primary-color);
+        }
+
+        #done-list li {
+            text-decoration: line-through;
+            color: var(--done-color);
+            background-color: #f9fafb;
+            border-left-color: var(--done-color);
+        }
+        
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 5px;
+            transition: color 0.3s;
+        }
+        .delete-btn:hover {
+            color: var(--accent-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 타이머 영역 -->
+    <div class="main-container">
+        <h1>뽀모도로 타이머</h1>
+        <div class="status-display" id="status-display">작업을 추가하고 시작하세요</div>
+        <div id="timer-canvas-wrapper">
+            <canvas id="timer-canvas" width="300" height="300"></canvas>
+        </div>
+        <input type="file" id="file-input" accept="image/*">
+        <div class="controls">
+            <button id="start-btn">시작</button>
+            <button id="pause-btn" disabled>일시정지</button>
+            <button id="reset-btn" disabled>초기화</button>
+        </div>
+    </div>
+
+    <!-- 작업 관리 영역 -->
+    <div class="task-container">
+        <h2>작업 관리</h2>
+        <div class="task-input-area">
+            <input type="text" id="task-input" placeholder="새 작업을 입력하세요">
+            <button id="add-task-btn">+</button>
+        </div>
+        <div class="task-lists-container">
+            <div class="task-lists">
+                <div class="task-list-wrapper">
+                    <h3>할 일 ✅</h3>
+                    <ul id="todo-list" class="task-list"></ul>
+                </div>
+                <div class="task-list-wrapper">
+                    <h3>한 일 🏁</h3>
+                    <ul id="done-list" class="task-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 상수 및 전역 변수 ---
+        const WORK_TIME = 25 * 60; // 25분
+        const SHORT_BREAK_TIME = 5 * 60; // 5분
+        const LONG_BREAK_TIME = 15 * 60; // 15분
+
+        // --- DOM 요소 ---
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const statusDisplay = document.getElementById('status-display');
+        const canvas = document.getElementById('timer-canvas');
+        const ctx = canvas.getContext('2d');
+        const canvasWrapper = document.getElementById('timer-canvas-wrapper');
+        const fileInput = document.getElementById('file-input');
+        
+        const taskInput = document.getElementById('task-input');
+        const addTaskBtn = document.getElementById('add-task-btn');
+        const todoList = document.getElementById('todo-list');
+        const doneList = document.getElementById('done-list');
+        
+        // --- 상태 변수 ---
+        let timerId = null;
+        let state = 'stopped'; // 'stopped', 'work', 'paused', 'shortBreak', 'longBreak'
+        let timeRemaining = WORK_TIME;
+        let pomodoroCount = 0;
+        let userImage = null;
+        let tasks = [];
+
+        // --- 알람 소리 (저작권 무료) ---
+        const alarmSound = new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_12b0c7443c.mp3?filename=correct-choice-43861.mp3');
+
+        // --- 캔버스 드로잉 로직 ---
+
+        /**
+         * 이미지가 없을 때 표시할 '갤러리+추가' 아이콘을 그립니다.
+         */
+        function drawPlaceholderIcon() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const radius = width / 2;
+
+            // 배경 그리기
+            ctx.fillStyle = '#e0e7ff'; // var(--primary-color)
+            ctx.beginPath();
+            ctx.arc(radius, radius, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 아이콘을 숫자 아래에 위치시키기
+            const iconCenterX = radius;
+            const iconCenterY = radius + 70; // 숫자보다 아래로
+            const iconSize = 70;
+
+            ctx.strokeStyle = '#4f46e5'; // var(--accent-color)
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // 갤러리 프레임
+            ctx.strokeRect(iconCenterX - iconSize / 2, iconCenterY - iconSize / 2.5, iconSize, iconSize * 0.8);
+            
+            // 산 모양
+            ctx.beginPath();
+            ctx.moveTo(iconCenterX - iconSize * 0.35, iconCenterY + iconSize * 0.05);
+            ctx.lineTo(iconCenterX - iconSize * 0.15, iconCenterY - iconSize * 0.15);
+            ctx.lineTo(iconCenterX + iconSize * 0.05, iconCenterY + iconSize * 0.1);
+            ctx.lineTo(iconCenterX + iconSize * 0.2, iconCenterY - iconSize * 0.05);
+            ctx.lineTo(iconCenterX + iconSize * 0.35, iconCenterY + iconSize * 0.15);
+            ctx.stroke();
+
+            // 해(태양)
+            ctx.fillStyle = '#4f46e5';
+            ctx.beginPath();
+            ctx.arc(iconCenterX + iconSize * 0.2, iconCenterY - iconSize * 0.1, iconSize * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+
+            // '+' 아이콘
+            const plusRadius = 18;
+            const plusCenterX = iconCenterX + iconSize / 2.5;
+            const plusCenterY = iconCenterY + iconSize / 3;
+            ctx.fillStyle = '#4f46e5';
+            ctx.beginPath();
+            ctx.arc(plusCenterX, plusCenterY, plusRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(plusCenterX - plusRadius * 0.5, plusCenterY);
+            ctx.lineTo(plusCenterX + plusRadius * 0.5, plusCenterY);
+            ctx.moveTo(plusCenterX, plusCenterY - plusRadius * 0.5);
+            ctx.lineTo(plusCenterX, plusCenterY + plusRadius * 0.5);
+            ctx.stroke();
+        }
+
+        /**
+         * 타이머의 현재 상태를 캔버스에 그립니다.
+         */
+        function drawTimer() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const radius = width / 2;
+
+            ctx.clearRect(0, 0, width, height);
+            
+            if (!userImage) {
+                drawPlaceholderIcon();
+            } else {
+                // 컬러 이미지 그리기 (원형 클리핑)
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(radius, radius, radius, 0, Math.PI * 2);
+                ctx.clip(); 
+
+                const imgRatio = userImage.width / userImage.height;
+                const canvasRatio = width / height;
+                let drawWidth, drawHeight, offsetX, offsetY;
+                
+                if (imgRatio > canvasRatio) {
+                    drawHeight = height;
+                    drawWidth = drawHeight * imgRatio;
+                    offsetX = (width - drawWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    drawWidth = width;
+                    drawHeight = drawWidth / imgRatio;
+                    offsetY = (height - drawHeight) / 2;
+                    offsetX = 0;
+                }
+                ctx.drawImage(userImage, offsetX, offsetY, drawWidth, drawHeight);
+                ctx.restore();
+
+                // 흑백 오버레이로 진행도 표시 (작업 중)
+                if (state === 'work' || (state === 'paused' && timeRemaining !== WORK_TIME)) {
+                    const progress = (WORK_TIME - timeRemaining) / WORK_TIME;
+                    if (progress < 1) {
+                        ctx.save();
+                        // 진행되지 않은 부분만 클리핑
+                        ctx.beginPath();
+                        ctx.moveTo(radius, radius);
+                        ctx.arc(radius, radius, radius, (progress * Math.PI * 2) - (Math.PI / 2), 3 * Math.PI / 2, false);
+                        ctx.closePath();
+                        ctx.clip();
+
+                        // 흑백 필터 적용 후 이미지 다시 그리기
+                        ctx.filter = 'grayscale(100%) brightness(1.1)';
+                        ctx.drawImage(userImage, offsetX, offsetY, drawWidth, drawHeight);
+                        ctx.restore();
+                    }
+                }
+            }
+
+            // 남은 시간 텍스트 그리기
+            const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
+            const seconds = String(timeRemaining % 60).padStart(2, '0');
+            
+            ctx.fillStyle = userImage ? 'white' : '#1f2937';
+            ctx.font = 'bold 60px Noto Sans KR';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = 10;
+            ctx.fillText(`${minutes}:${seconds}`, radius, radius);
+            ctx.shadowBlur = 0;
+        }
+
+        // --- 타이머 로직 ---
+        function mainLoop() {
+            if (state === 'paused' || state === 'stopped') return;
+            timeRemaining--;
+            const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
+            const seconds = String(timeRemaining % 60).padStart(2, '0');
+            document.title = `(${minutes}:${seconds}) ${statusDisplay.textContent}`;
+            if (timeRemaining < 0) {
+                switchState();
+            }
+            drawTimer();
+        }
+
+        function switchState() {
+            alarmSound.play();
+            if (state === 'work') {
+                pomodoroCount++;
+                const currentTaskEl = todoList.querySelector('li');
+                if (currentTaskEl) {
+                    const taskId = parseInt(currentTaskEl.dataset.id);
+                    moveTaskToDone(taskId);
+                }
+                if (pomodoroCount % 4 === 0) {
+                    state = 'longBreak';
+                    timeRemaining = LONG_BREAK_TIME;
+                    statusDisplay.textContent = '긴 휴식';
+                } else {
+                    state = 'shortBreak';
+                    timeRemaining = SHORT_BREAK_TIME;
+                    statusDisplay.textContent = '짧은 휴식';
+                }
+            } else {
+                state = 'work';
+                timeRemaining = WORK_TIME;
+                statusDisplay.textContent = '작업 시간';
+                if (todoList.children.length === 0) {
+                    statusDisplay.textContent = '모든 작업을 완료했어요!';
+                    stopTimer();
+                    return;
+                }
+            }
+            document.title = statusDisplay.textContent;
+            drawTimer();
+        }
+        
+        function startTimer() {
+            if (todoList.children.length === 0 && state !== 'shortBreak' && state !== 'longBreak') {
+                statusDisplay.textContent = '할 일을 먼저 추가하세요!';
+                return;
+            }
+            if (state === 'stopped') {
+                state = 'work';
+                statusDisplay.textContent = '작업 시간';
+            }
+            if (state === 'paused') {
+                const currentStatus = statusDisplay.textContent.replace(' (일시정지)', '');
+                statusDisplay.textContent = currentStatus;
+                if (currentStatus.includes('작업')) state = 'work';
+                else if (currentStatus.includes('짧은')) state = 'shortBreak';
+                else if (currentStatus.includes('긴')) state = 'longBreak';
+            }
+            timerId = setInterval(mainLoop, 1000);
+            updateButtonStates();
+            mainLoop();
+        }
+
+        function pauseTimer() {
+            if (state !== 'paused' && state !== 'stopped') {
+                state = 'paused';
+                clearInterval(timerId);
+                statusDisplay.textContent += ' (일시정지)';
+                document.title = '일시정지됨';
+                updateButtonStates();
+            }
+        }
+        
+        function stopTimer() {
+            clearInterval(timerId);
+            state = 'stopped';
+            timeRemaining = WORK_TIME;
+            pomodoroCount = 0;
+            drawTimer();
+            updateButtonStates();
+            statusDisplay.textContent = '작업을 추가하고 시작하세요';
+            document.title = '뽀모도로 타이머';
+        }
+
+        function updateButtonStates() {
+            const isRunning = (state !== 'paused' && state !== 'stopped');
+            startBtn.disabled = isRunning;
+            pauseBtn.disabled = !isRunning;
+            resetBtn.disabled = (state === 'stopped');
+        }
+
+        // --- 작업 관리 로직 ---
+        function renderTasks() {
+            todoList.innerHTML = '';
+            doneList.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.textContent = task.text;
+                li.dataset.id = task.id;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '×';
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteTask(task.id);
+                };
+                li.appendChild(deleteBtn);
+                if (task.completed) {
+                    doneList.prepend(li);
+                } else {
+                    todoList.appendChild(li);
+                }
+            });
+            const firstTodo = todoList.querySelector('li');
+            if (firstTodo) {
+                firstTodo.classList.add('current-task');
+            }
+            saveTasks();
+        }
+
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (text) {
+                tasks.push({ id: Date.now(), text: text, completed: false });
+                taskInput.value = '';
+                renderTasks();
+            }
+        }
+        
+        function moveTaskToDone(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = true;
+                renderTasks();
+            }
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+            if (todoList.children.length === 0 && (state === 'work' || state === 'paused')) {
+                stopTimer();
+                statusDisplay.textContent = '할 일이 없어 타이머를 중지합니다.';
+            }
+        }
+
+        function saveTasks() {
+            localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            const storedTasks = localStorage.getItem('pomodoroTasks');
+            if (storedTasks) {
+                tasks = JSON.parse(storedTasks);
+            }
+            renderTasks();
+        }
+
+        // --- 이벤트 리스너 ---
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        resetBtn.addEventListener('click', stopTimer);
+
+        canvasWrapper.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    userImage = new Image();
+                    userImage.onload = () => drawTimer();
+                    userImage.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        addTaskBtn.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        // --- 초기화 ---
+        window.addEventListener('load', () => {
+            loadTasks();
+            drawTimer();
+            updateButtonStates();
+        });
+    </script>
+</body>
+</html>
