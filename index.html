@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>뽀모도로 타이머</title>
+    <!-- 토마토 이모지 파비콘 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🍅</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
     <style>
         /* 기본 폰트 및 레이아웃 설정 */
@@ -64,16 +66,16 @@
             letter-spacing: 1px;
         }
         h2 {
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 10px;
-            margin-bottom: 18px;
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 8px;
         }
 
         #timer-canvas-wrapper {
             position: relative;
             width: 280px;
             height: 280px;
-            margin: 18px auto 10px auto;
+            margin: 12px auto 0 auto;
             background: var(--accent-color);
             border-radius: 50%;
             box-shadow: 0 4px 24px rgba(255,94,87,0.10);
@@ -103,7 +105,7 @@
         }
 
         .controls {
-            margin-top: 10px;
+            margin-top: 32px;
             display: flex;
             justify-content: center;
             gap: 12px;
@@ -150,6 +152,7 @@
             border-radius: 18px;
             font-size: 1.05rem;
             transition: border-color 0.2s;
+            font-family: 'Jua', 'Nanum Pen Script', 'Noto Sans KR', sans-serif;
         }
         #task-input:focus {
             outline: none;
@@ -270,6 +273,29 @@
         .task-list li.current-task .delete-btn:hover {
           color: #ffe5d0 !important;
         }
+        /* 한 일의 delete 버튼에는 취소선이 보이지 않게 */
+        #done-list li .delete-btn {
+          text-decoration: none !important;
+          color: #ffb4a2 !important;
+        }
+        /* 드래그 앤 드롭 시 스타일 */
+        .task-list li.dragging {
+          opacity: 0.5;
+        }
+        .task-list li.drag-over {
+          outline: 2px dashed #ffb4a2;
+          background: #fff0ea;
+        }
+        /* 리스트 간 드롭 시 스타일 */
+        #todo-list.drag-over, #done-list.drag-over {
+          outline: 2px dashed #ffb4a2;
+          background: #fff0ea;
+        }
+        /* 영역 드롭존 스타일 */
+        .task-list-wrapper.drag-over-zone {
+            background: #fff0ea;
+            border-radius: 16px;
+        }
     </style>
 </head>
 <body>
@@ -297,6 +323,11 @@
     <!-- 작업 관리 영역 -->
     <div class="task-container">
         <h2>작업 관리</h2>
+        <div class="wave-underline">
+            <svg viewBox="0 0 220 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 8 Q 11 16, 22 8 T 44 8 T 66 8 T 88 8 T 110 8 T 132 8 T 154 8 T 176 8 T 198 8 T 220 8" stroke="#ffb4a2" stroke-width="3" fill="none"/>
+            </svg>
+        </div>
         <div class="task-input-area">
             <input type="text" id="task-input" placeholder="새 작업을 입력하세요">
             <button id="add-task-btn">+</button>
@@ -340,12 +371,12 @@
         let timerId = null;
         let state = 'stopped'; // 'stopped', 'work', 'paused', 'shortBreak', 'longBreak'
         let timeRemaining = WORK_TIME;
-        let pomodoroCount = 0;
+        let pomodoroCount = 1;
         let userImage = null;
         let tasks = [];
 
         // --- 알람 소리 (딩동댕 저작권 무료) ---
-        const alarmSound = new Audio('https://cdn.pixabay.com/audio/2022/10/16/audio_12c6b1b6b2.mp3'); // dingdong 효과음
+        const alarmSound = new Audio('pop.mp3'); // dingdong 효과음
 
         // --- 캔버스 드로잉 로직 ---
 
@@ -360,7 +391,29 @@
             ctx.clearRect(0, 0, width, height);
             
             if (!userImage) {
-                drawPlaceholderIcon();
+                // 1. 토마토 원 그리기
+                drawTomatoCircle();
+                // 2. 진행률에 따라 투명 arc로 덮어씌우기
+                const progress = (state === 'work' || (state === 'paused' && timeRemaining !== WORK_TIME)) ? (WORK_TIME - timeRemaining) / WORK_TIME : 0;
+                if (progress > 0 && progress < 1) {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.beginPath();
+                    ctx.moveTo(radius, radius);
+                    ctx.arc(
+                        radius,
+                        radius,
+                        radius,
+                        -Math.PI / 2 + progress * Math.PI * 2,
+                        3 * Math.PI / 2,
+                        false
+                    );
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                }
+                // 3. 아이콘(갤러리, 산, +) 항상 위에 그리기
+                drawTomatoIcon();
             } else {
                 // 컬러 이미지 그리기 (원형 클리핑)
                 ctx.save();
@@ -406,7 +459,7 @@
                 }
             }
 
-            // 남은 시간 텍스트 그리기
+            // 남은 시간 텍스트 그리기 (사진이 없어도 항상 표시)
             const minutes = String(Math.floor(timeRemaining / 60)).padStart(2, '0');
             const seconds = String(timeRemaining % 60).padStart(2, '0');
             
@@ -420,33 +473,33 @@
             ctx.shadowBlur = 0;
         }
 
-        function drawPlaceholderIcon() {
+        // 토마토 원만 그리기
+        function drawTomatoCircle() {
             const width = canvas.width;
             const height = canvas.height;
             const radius = width / 2;
-
-            // 배경 그리기
             ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#ff5e57';
             ctx.beginPath();
             ctx.arc(radius, radius, radius, 0, Math.PI * 2);
             ctx.fill();
+        }
 
-            // 아이콘을 숫자 아래에 위치시키기
+        // 흰색 아이콘(갤러리, 산, +)만 그리기
+        function drawTomatoIcon() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const radius = width / 2;
             const iconCenterX = radius;
-            const iconCenterY = radius + 70; // 숫자보다 아래로
-            const iconSize = 35; // 50% 축소
-
+            const iconCenterY = radius + 70;
+            const iconSize = 35;
             ctx.save();
-            ctx.globalAlpha = 0.5; // 투명도 50%
-
-            ctx.strokeStyle = '#fff'; // 흰색
+            ctx.globalAlpha = 0.5;
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-
             // 갤러리 프레임
             ctx.strokeRect(iconCenterX - iconSize / 2, iconCenterY - iconSize / 2.5, iconSize, iconSize * 0.8);
-            
             // 산 모양
             ctx.beginPath();
             ctx.moveTo(iconCenterX - iconSize * 0.35, iconCenterY + iconSize * 0.05);
@@ -455,23 +508,19 @@
             ctx.lineTo(iconCenterX + iconSize * 0.2, iconCenterY - iconSize * 0.05);
             ctx.lineTo(iconCenterX + iconSize * 0.35, iconCenterY + iconSize * 0.15);
             ctx.stroke();
-
             // 해(태양)
-            ctx.fillStyle = '#fff'; // 흰색
+            ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(iconCenterX + iconSize * 0.2, iconCenterY - iconSize * 0.1, iconSize * 0.08, 0, Math.PI * 2);
             ctx.fill();
-
-            // '+' 아이콘
-            const plusRadius = 9; // 50% 축소
+            // + 아이콘 (동그라미 흰색, 십자선 토마토색)
+            const plusRadius = 9;
             const plusCenterX = iconCenterX + iconSize / 2.5;
             const plusCenterY = iconCenterY + iconSize / 3;
-            // 동그라미(배경)는 흰색
             ctx.fillStyle = '#fff';
             ctx.beginPath();
             ctx.arc(plusCenterX, plusCenterY, plusRadius, 0, Math.PI * 2);
             ctx.fill();
-            // + 십자선만 토마토색
             ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim() || '#ff5e57';
             ctx.lineWidth = 3;
             ctx.beginPath();
@@ -480,7 +529,6 @@
             ctx.moveTo(plusCenterX, plusCenterY - plusRadius * 0.5);
             ctx.lineTo(plusCenterX, plusCenterY + plusRadius * 0.5);
             ctx.stroke();
-
             ctx.restore();
         }
 
@@ -495,6 +543,7 @@
                 switchState();
             }
             drawTimer();
+            updatePomodoroDisplay();
         }
 
         function switchState() {
@@ -503,8 +552,23 @@
                 pomodoroCount++;
                 const currentTaskEl = todoList.querySelector('li');
                 if (currentTaskEl) {
-                    const taskId = parseInt(currentTaskEl.dataset.id);
-                    moveTaskToDone(taskId);
+                    // 해당 태스크명으로 물어보기
+                    const taskText = currentTaskEl.textContent.replace('×', '').trim();
+                    const done = confirm(`[${taskText}]을(를) 끝냈나요?`);
+                    if (done) {
+                        const taskId = parseInt(currentTaskEl.dataset.id);
+                        moveTaskToDone(taskId);
+                        pomodoroCount = 1; // 태스크 완료 시 1로 초기화
+                        // 바로 5분 쉬는 시간으로 전환
+                        state = 'shortBreak';
+                        timeRemaining = SHORT_BREAK_TIME;
+                        statusDisplay.textContent = '짧은 휴식';
+                        document.title = statusDisplay.textContent;
+                        drawTimer();
+                        updatePomodoroDisplay();
+                        updateButtonStates();
+                        return;
+                    }
                 }
                 if (pomodoroCount % 4 === 0) {
                     state = 'longBreak';
@@ -515,7 +579,8 @@
                     timeRemaining = SHORT_BREAK_TIME;
                     statusDisplay.textContent = '짧은 휴식';
                 }
-            } else {
+            } else if (state === 'shortBreak' || state === 'longBreak') {
+                // 쉬는 시간 끝나면 바로 작업 시작
                 state = 'work';
                 timeRemaining = WORK_TIME;
                 statusDisplay.textContent = '작업 시간';
@@ -527,6 +592,8 @@
             }
             document.title = statusDisplay.textContent;
             drawTimer();
+            updatePomodoroDisplay();
+            updateButtonStates();
         }
         
         function startTimer() {
@@ -564,11 +631,12 @@
             clearInterval(timerId);
             state = 'stopped';
             timeRemaining = WORK_TIME;
-            pomodoroCount = 0;
+            pomodoroCount = 1;
             drawTimer();
             updateButtonStates();
             statusDisplay.textContent = '작업을 추가하고 시작하세요';
             document.title = '뽀모도로 타이머';
+            updatePomodoroDisplay();
         }
 
         function updateButtonStates() {
@@ -582,10 +650,38 @@
         function renderTasks() {
             todoList.innerHTML = '';
             doneList.innerHTML = '';
-            tasks.forEach(task => {
+            tasks.forEach((task, idx) => {
                 const li = document.createElement('li');
                 li.textContent = task.text;
                 li.dataset.id = task.id;
+                // 드래그 앤 드롭 속성 (li는 drag만, drop은 wrapper에서)
+                li.draggable = true;
+                li.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', idx);
+                    li.classList.add('dragging');
+                });
+                li.addEventListener('dragend', () => {
+                    li.classList.remove('dragging');
+                });
+                // 같은 리스트 내 순서 변경
+                li.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    li.classList.add('drag-over');
+                });
+                li.addEventListener('dragleave', () => {
+                    li.classList.remove('drag-over');
+                });
+                li.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    li.classList.remove('drag-over');
+                    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIdx = idx;
+                    if (fromIdx !== toIdx && tasks[fromIdx].completed === tasks[toIdx].completed) {
+                        const moved = tasks.splice(fromIdx, 1)[0];
+                        tasks.splice(toIdx, 0, moved);
+                        renderTasks();
+                    }
+                });
                 const deleteBtn = document.createElement('button');
                 deleteBtn.textContent = '×';
                 deleteBtn.className = 'delete-btn';
@@ -600,9 +696,47 @@
                     todoList.appendChild(li);
                 }
             });
+            // 영역 드롭존 이벤트 (li가 아닌 wrapper에, 중복 등록 방지)
+            [
+              {type: 'todo', list: todoList},
+              {type: 'done', list: doneList}
+            ].forEach(({type, list}) => {
+              const wrapper = list.closest('.task-list-wrapper');
+              // 기존 이벤트 제거
+              wrapper.ondragover = null;
+              wrapper.ondragleave = null;
+              wrapper.ondrop = null;
+              // 새 이벤트 등록
+              wrapper.ondragover = (e) => { e.preventDefault(); wrapper.classList.add('drag-over-zone'); };
+              wrapper.ondragleave = () => { wrapper.classList.remove('drag-over-zone'); };
+              wrapper.ondrop = (e) => {
+                e.preventDefault();
+                wrapper.classList.remove('drag-over-zone');
+                const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                if (type === 'todo' && tasks[fromIdx] && tasks[fromIdx].completed) {
+                  tasks[fromIdx].completed = false;
+                  const moved = tasks.splice(fromIdx, 1)[0];
+                  tasks.push(moved);
+                  renderTasks();
+                }
+                if (type === 'done' && tasks[fromIdx] && !tasks[fromIdx].completed) {
+                  tasks[fromIdx].completed = true;
+                  const moved = tasks.splice(fromIdx, 1)[0];
+                  tasks.unshift(moved);
+                  renderTasks();
+                }
+              };
+            });
             const firstTodo = todoList.querySelector('li');
             if (firstTodo) {
                 firstTodo.classList.add('current-task');
+            }
+            // 상태 표시 문구 제어
+            const statusDisplay = document.getElementById('status-display');
+            if (todoList.children.length > 0) {
+                statusDisplay.style.visibility = 'hidden';
+            } else {
+                statusDisplay.style.visibility = 'visible';
             }
             saveTasks();
         }
@@ -674,7 +808,28 @@
             loadTasks();
             drawTimer();
             updateButtonStates();
+            updatePomodoroDisplay(); // 초기화 시 표시
         });
+
+        // Pomodoro 카운트 표시
+        function updatePomodoroDisplay() {
+            let el = document.getElementById('pomodoro-count');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'pomodoro-count';
+                el.style.margin = '8px 0 0 0';
+                el.style.fontFamily = "'Jua', 'Nanum Pen Script', 'Noto Sans KR', sans-serif";
+                el.style.fontSize = '1.1rem';
+                el.style.color = '#ff5e57';
+                el.style.fontWeight = 'bold';
+                const timerWrapper = document.getElementById('timer-canvas-wrapper');
+                timerWrapper.parentNode.insertBefore(el, timerWrapper.nextSibling);
+            }
+            el.textContent = `🍅 ${pomodoroCount || 1}번째 뽀모도로`;
+        }
+        // 초기화 및 타이머 상태 변경 시에도 표시
+        window.addEventListener('load', updatePomodoroDisplay);
+        // stopTimer, mainLoop 등에서 updatePomodoroDisplay 호출
     </script>
 </body>
 </html>
