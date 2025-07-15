@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>무한의 계단 (Infinite Stairs) - 웹 게임</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #222;
+      overflow: hidden;
+      font-family: 'Jua', sans-serif;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      height: 100vh;
+      font-family: 'Jua', sans-serif;
+    }
+    #game-container {
+      position: relative;
+      margin-top: 16px;
+    }
+    #game-canvas {
+      background: #333;
+      display: block;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px #000a;
+    }
+    #score {
+      color: #222;
+      font-size: 1.3rem;
+      font-family: 'Jua', sans-serif;
+      text-align: center;
+      margin-bottom: 18px;
+      letter-spacing: 2px;
+      background: rgba(255,255,255,0.85);
+      border-radius: 999px;
+      box-shadow: 0 2px 12px #0002;
+      padding: 8px 22px 4px 22px;
+      display: inline-block;
+      border: 2px solid #eee;
+      min-width: 90px;
+      font-weight: bold;
+      text-shadow: 0 2px 8px #fff8, 1px 1px 0 #fff8;
+      letter-spacing: 2.5px;
+    }
+    .btns {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+      user-select: none;
+    }
+    .game-btn {
+      background: #eee;
+      color: #444;
+      font-size: 0.85rem;
+      font-family: 'Jua', sans-serif;
+      border: none;
+      border-radius: 50%;
+      width: 94px;
+      height: 94px;
+      padding: 0;
+      box-shadow: 0 2px 8px #0006;
+      cursor: pointer;
+      transition: background 0.2s;
+      outline: none;
+      touch-action: manipulation;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .game-btn:active {
+      background: #ccc;
+      transform: translateY(8px);
+    }
+    .game-btn.pressed {
+      background: #ccc;
+      transform: translateY(8px);
+      transition: background 0.2s, transform 0.08s;
+    }
+    @media (max-width: 600px) {
+      #game-canvas {
+        width: 320px !important;
+        height: 480px !important;
+      }
+      .game-btn {
+        font-size: 0.7rem;
+        width: 70px;
+        height: 70px;
+      }
+    }
+    .btns-label {
+      color: #aaa;
+      font-size: 0.78rem;
+      text-align: center;
+      margin-top: 28px;
+      margin-bottom: 0;
+      font-family: 'Jua', sans-serif;
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+    /* 폰트 강제 적용: 모든 주요 태그에 Jua */
+    body, button, input, select, textarea, div, span {
+      font-family: 'Jua', sans-serif !important;
+    }
+    #menu-hamburger:hover {
+      background: rgba(255,255,255,0.18) !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+  <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+    <div style="width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;">
+      <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+      <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+      <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+    </div>
+  </div>
+  <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;font-family: 'Jua', sans-serif;">
+    <div style="font-size:1.08rem;font-weight:bold;color:#ff5e57;margin-bottom:10px;">메뉴</div>
+    <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='index.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">뽀모도로 타이머</div>
+    <div style="cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='infinitedStairs.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">무한의 계단</div>
+  </div>
+  <div id="score"><span style="font-size:1.1rem;opacity:0.7;letter-spacing:1.5px;">SCORE :</span> <span id="score-value">0</span></div>
+  <div id="game-container">
+    <canvas id="game-canvas" width="400" height="600"></canvas>
+  </div>
+  <div class="btns">
+    <button class="game-btn" id="btn-turn" aria-label="방향전환">
+      <!-- 호 끝에 수직 꺾쇠(화살촉)만 맞춘 새로고침 아이콘(180도 반대) -->
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M28 14a10 10 0 1 0 3 7.5" stroke="#444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M28 15l-6 0" stroke="#444" stroke-width="3" stroke-linecap="round"/>
+        <path d="M28 14l0 -6" stroke="#444" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <button class="game-btn" id="btn-up" aria-label="내려가기">
+      <!-- 아래쪽 화살표 아이콘 -->
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 10v18" stroke="#444" stroke-width="3" stroke-linecap="round"/>
+        <path d="M12 25l7 7 7-7" stroke="#444" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="btns-label">[스페이스]와 [↓]로도 가능</div>
+  <!-- 효과음 태그 제거 (Web Audio API 사용) -->
+  <script>
+// --- 게임 상수 ---
+const CANVAS_W = 400;
+const CANVAS_H = 600;
+const TILE = 32; // 계단, 캐릭터 도트 크기
+const INIT_STAIRS = 20; // 시작 계단 수
+const STAIR_COLORS = ['#b8b8b8', '#e0e0e0'];
+const CHAR_COLORS = ['#222', '#fff', '#e55', '#5af', '#fa0'];
+const FPS = 60;
+const ANIM_FRAMES = 8; // 이동 애니메이션 프레임 수
+
+// --- 게임 상태 ---
+let stairs = [];
+let player = null;
+let score = 0;
+let gameOver = false;
+let animating = false;
+let animFrame = 0;
+let moveFrom = null;
+let moveTo = null;
+let cameraOffsetY = 0;
+
+// --- 캔버스 ---
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+// --- 계단 생성 ---
+function genStairs(initN, startX, startY) {
+  const arr = [];
+  let x = startX, y = startY;
+  let dir = 1; // 1: 오른쪽, -1: 왼쪽
+  const minX = 0;
+  const maxX = Math.floor(CANVAS_W / TILE) - 1;
+  for (let i = 0; i < initN; i++) {
+    arr.push({x, y, dir});
+    if (Math.random() < 0.5) {
+      dir *= -1;
+    }
+    // 화면 밖으로 나가면 방향 반전
+    if (x + dir < minX || x + dir > maxX) dir *= -1;
+    x += dir;
+    // x가 범위를 벗어나면 강제로 보정
+    if (x < minX) x = minX;
+    if (x > maxX) x = maxX;
+    y += 1; // 아래로 생성
+  }
+  return arr;
+}
+
+// --- 플레이어 ---
+function initPlayer() {
+  // 계단 0번 위에 위치, 오른쪽 바라봄
+  const stair = stairs[0];
+  return {
+    stairIdx: 0,
+    lastStairIdx: 0, // 마지막 밟은 계단 인덱스
+    x: stair.x,
+    y: stair.y,
+    dir: stair.dir, // 1: 오른쪽, -1: 왼쪽
+    alive: true,
+    falling: false, // 낙하 상태
+    fallY: 0, // 낙하 y좌표(실수)
+    fallV: 0, // 낙하 속도
+    fallWait: 0, // 낙하 전 대기 프레임
+    fallAfterAnim: false, // 애니메이션 후 낙하 예약
+    fallSoundPlayed: false // 낙하 사운드 1회만
+  };
+}
+
+// --- 계단 좌표 → 화면 좌표 ---
+function stairToScreen(x, y) {
+  // 계단 0번을 화면 상단 중앙에 정렬 (플레이어가 항상 상단 1/4 지점에 고정)
+  const baseX = CANVAS_W/2 - stairs[0].x * TILE;
+  const playerScreenBase = CANVAS_H * 1/4;
+  // player.stairIdx가 -1이면 lastStairIdx 사용
+  let stairIdx = player && player.stairIdx !== undefined && player.stairIdx >= 0 ? player.stairIdx : (player ? player.lastStairIdx : 0);
+  const playerStair = stairs[stairIdx];
+  const offsetY = playerScreenBase - (TILE*2 + cameraOffsetY + (playerStair ? playerStair.y * TILE : 0));
+  const baseY = TILE*2 + cameraOffsetY + offsetY;
+  return {
+    sx: baseX + x * TILE,
+    sy: baseY + y * TILE
+  };
+}
+
+// --- 계단 추가 (아래로 내려가면) ---
+function addStair() {
+  const last = stairs[stairs.length-1];
+  let dir = last.dir;
+  if (Math.random() < 0.5) dir *= -1;
+  const minX = 0;
+  const maxX = Math.floor(CANVAS_W / TILE) - 1;
+  let x = last.x + dir;
+  // 화면 밖으로 나가면 방향 반전
+  if (x < minX || x > maxX) {
+    dir *= -1;
+    x = last.x + dir;
+  }
+  // x가 범위를 벗어나면 강제로 보정
+  if (x < minX) x = minX;
+  if (x > maxX) x = maxX;
+  const y = last.y + 1; // 아래로
+  stairs.push({x, y, dir});
+}
+
+// --- 계단 존재 여부 ---
+function isStairAt(x, y) {
+  return stairs.some(s => s.x === x && s.y === y);
+}
+
+// --- 효과음 함수 (Web Audio API) ---
+function playMoveSound() {
+  // 짧은 피아노/벨 계열
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.value = 880; // A5
+  g.gain.value = 0.18;
+  o.connect(g).connect(ctx.destination);
+  o.start();
+  o.frequency.linearRampToValueAtTime(1046, ctx.currentTime + 0.08); // C6
+  g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.13);
+  o.stop(ctx.currentTime + 0.13);
+  o.onended = () => ctx.close();
+}
+function playFallSound(duration = 0.5, muteDelay = 0) {
+  // muteDelay(ms) 후 긴 buzzy fail 계열
+  setTimeout(() => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.value = 220; // A3
+    g.gain.value = 0.22;
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.frequency.linearRampToValueAtTime(60, ctx.currentTime + duration);
+    g.gain.linearRampToValueAtTime(0, ctx.currentTime + duration);
+    o.stop(ctx.currentTime + duration);
+    o.onended = () => ctx.close();
+  }, muteDelay);
+}
+
+// --- 이동 시도 (내려가기) ---
+function tryMove() {
+  if (gameOver || animating || player.falling) return;
+  const cur = stairs[player.stairIdx];
+  const nextX = cur.x + player.dir;
+  const nextY = cur.y + 1; // 아래로
+  // 계단 존재 확인
+  const nextIdx = stairs.findIndex(s => s.x === nextX && s.y === nextY);
+  if (nextIdx === -1) {
+    // 계단이 없는 곳으로 이동 애니메이션 후, 0.6초(36프레임) 대기, 그 위치에서 낙하
+    animating = true;
+    animFrame = 0;
+    moveFrom = {x: cur.x, y: cur.y};
+    moveTo = {x: nextX, y: nextY};
+    player.lastStairIdx = player.stairIdx; // 마지막 밟은 계단 인덱스 저장
+    // player.stairIdx = -1; // 계단 없음 (이제 사용 안 함)
+    player.x = nextX;
+    player.y = nextY;
+    player.fallAfterAnim = true; // 낙하 예약
+    // --- 떨어질 때 효과음은 낙하 시작 시점에 재생 (gameLoop에서)
+    return;
+  }
+  // 애니메이션 준비
+  animating = true;
+  animFrame = 0;
+  moveFrom = {x: cur.x, y: cur.y};
+  moveTo = {x: nextX, y: nextY};
+  player.lastStairIdx = player.stairIdx; // 정상 이동 시에도 갱신
+  player.stairIdx = nextIdx;
+  player.x = nextX;
+  player.y = nextY;
+  player.fallAfterAnim = false;
+  // 계단 부족하면 추가
+  if (stairs.length - player.stairIdx < 10) {
+    for (let i = 0; i < 5; i++) addStair();
+  }
+  // 점수 증가
+  score++;
+  document.getElementById('score-value').textContent = score;
+  // --- 내려갈 때 효과음 ---
+  playMoveSound();
+}
+
+// --- 방향 전환 ---
+function turnDir() {
+  if (gameOver || animating) return;
+  player.dir *= -1;
+  tryMove(); // 방향전환 후 한 칸 내려감
+}
+
+// --- 게임 오버 ---
+function endGame() {
+  gameOver = true;
+  // startGame 등 자동 호출 제거 (이미 없음)
+}
+
+// --- 게임 초기화 ---
+function startGame() {
+  stairs = genStairs(INIT_STAIRS, 0, 0);
+  player = initPlayer();
+  score = 0;
+  gameOver = false;
+  animating = false;
+  animFrame = 0;
+  cameraOffsetY = 0;
+  document.getElementById('score-value').textContent = score;
+  for (let i = 0; i < 20; i++) addStair();
+}
+
+// --- 캐릭터 그리기 (도트풍) ---
+function drawChar(sx, sy, dir) {
+  // 도트풍: 머리(정사각), 몸통, 다리, 팔
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(dir, 1); // 방향
+  // 다리
+  ctx.fillStyle = CHAR_COLORS[3];
+  ctx.fillRect(-6, 12, 6, 8);
+  ctx.fillRect(0, 12, 6, 8);
+  // 몸통
+  ctx.fillStyle = CHAR_COLORS[1];
+  ctx.fillRect(-7, 0, 14, 14);
+  // 팔
+  ctx.fillStyle = CHAR_COLORS[4];
+  ctx.fillRect(-12, 2, 5, 8);
+  ctx.fillRect(7, 2, 5, 8);
+  // 머리
+  ctx.fillStyle = CHAR_COLORS[2];
+  ctx.fillRect(-8, -12, 16, 16);
+  // 눈
+  ctx.fillStyle = CHAR_COLORS[0];
+  ctx.fillRect(2, -8, 3, 3);
+  ctx.restore();
+}
+
+// --- 계단 그리기 ---
+function drawStairs() {
+  for (let i = 0; i < stairs.length; i++) {
+    const s = stairs[i];
+    const {sx, sy} = stairToScreen(s.x, s.y);
+    // 화면 안에 있을 때만 그리기
+    if (sx >= 0 && sx <= CANVAS_W) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.fillStyle = STAIR_COLORS[i%2];
+      ctx.fillRect(-TILE/2, -TILE/4, TILE, TILE/2);
+      ctx.restore();
+    }
+  }
+}
+
+// --- 게임 루프 ---
+function gameLoop() {
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  // 목표 카메라 위치: 플레이어가 항상 화면 상단 1/4 지점에 고정
+  let targetCamY;
+  let charPos;
+  let shouldDrawChar = true;
+  if (player && player.falling) {
+    // 낙하 연출
+    if (player.fallWait > 0) {
+      player.fallWait--;
+      // 대기 중에는 위치 고정
+      charPos = stairToScreen(player.x, player.fallY);
+    } else {
+      // 낙하 시작 시 효과음(한 번만)
+      if (!player.fallSoundPlayed) {
+        playFallSound(0.5, 0); // 0.5초짜리 긴 사운드
+        player.fallSoundPlayed = true;
+      }
+      // 빠른 낙하 (가속도 적용)
+      player.fallV += 0.7;
+      player.fallY += player.fallV / TILE;
+      charPos = stairToScreen(player.x, player.fallY);
+      // 화면 아래로 벗어나면 게임오버
+      if (charPos.sy > CANVAS_H + TILE) {
+        player.falling = false;
+        // 캐릭터가 잠깐 보이지 않게 바로 게임오버
+        endGame();
+      }
+    }
+    // 카메라도 낙하를 따라감
+    targetCamY = cameraOffsetY + (CANVAS_H * 1/4 - charPos.sy);
+  } else if (animating && moveFrom && moveTo) {
+    animFrame++;
+    const t = Math.min(animFrame/ANIM_FRAMES, 1);
+    const ix = moveFrom.x + (moveTo.x - moveFrom.x) * t;
+    const iy = moveFrom.y + (moveTo.y - moveFrom.y) * t;
+    charPos = stairToScreen(ix, iy);
+    if (t >= 1) {
+      if (player.fallAfterAnim) {
+        // 계단 없는 곳으로 이동 후 1초 대기, 그 위치에서 낙하
+        animating = false;
+        moveFrom = moveTo = null;
+        player.falling = true;
+        player.fallY = player.y;
+        player.fallV = 0;
+        player.fallWait = 60; // 1초
+        player.fallAfterAnim = false;
+      } else {
+        animating = false;
+        moveFrom = moveTo = null;
+      }
+    }
+    // 카메라 따라감
+    targetCamY = cameraOffsetY + (CANVAS_H * 1/4 - charPos.sy);
+  } else {
+    const charScreenY = stairToScreen(player.x, player.y).sy;
+    targetCamY = cameraOffsetY + (CANVAS_H * 1/4 - charScreenY);
+  }
+  // cameraOffsetY를 부드럽게 보간
+  cameraOffsetY += (targetCamY - cameraOffsetY) * 0.25;
+
+  // 계단
+  drawStairs();
+  // 캐릭터
+  if (player && !charPos) {
+    charPos = stairToScreen(player.x, player.y);
+  }
+  // 캐릭터는 게임오버가 아니거나, 낙하 중일 때만 그린다
+  if (player && (!gameOver || player.falling)) {
+    drawChar(charPos.sx, charPos.sy - 18, player.dir); // 기존보다 10px 위로
+  }
+  // 게임 오버 시 반투명 오버레이
+  if (gameOver) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillStyle = '#fff';
+    ctx.font = "bold 32px 'Jua', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', CANVAS_W/2, CANVAS_H/2);
+    // 다시 시작 버튼 DOM 표시
+    showRestartButton();
+  } else {
+    hideRestartButton();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+// --- 입력 처리 ---
+function setupInput() {
+  const btnUp = document.getElementById('btn-up');
+  const btnTurn = document.getElementById('btn-turn');
+  btnUp.addEventListener('click', tryMove);
+  btnTurn.addEventListener('click', turnDir);
+  document.addEventListener('keydown', e => {
+    if (gameOver) {
+      // 게임오버 상태에서 스페이스바로 다시시작
+      if (e.code === 'Space') {
+        if (restartBtn) {
+          restartBtn.classList.add('pressed');
+          setTimeout(() => restartBtn.classList.remove('pressed'), 120);
+        }
+        startGame();
+        hideRestartButton();
+        e.preventDefault();
+      }
+      return;
+    }
+    if (e.code === 'ArrowDown') {
+      // ↓ 버튼 눌림 효과
+      btnUp.classList.add('pressed');
+      setTimeout(() => btnUp.classList.remove('pressed'), 150);
+      tryMove();
+      e.preventDefault();
+    } else if (e.code === 'Space') {
+      // 방향전환 버튼 눌림 효과
+      btnTurn.classList.add('pressed');
+      setTimeout(() => btnTurn.classList.remove('pressed'), 150);
+      turnDir();
+      e.preventDefault();
+    }
+  });
+  // 모바일: 버튼 연타 방지
+  btnUp.addEventListener('touchstart', e => { e.preventDefault(); tryMove(); });
+  btnTurn.addEventListener('touchstart', e => { e.preventDefault(); turnDir(); });
+}
+
+// 햄버거 메뉴 동작
+const menuBtn = document.getElementById('menu-hamburger');
+const menuPopup = document.getElementById('menu-popup');
+menuBtn.onclick = (e) => {
+  e.stopPropagation();
+  menuPopup.style.display = (menuPopup.style.display === 'none' || menuPopup.style.display === '') ? 'block' : 'none';
+};
+// 메뉴 바깥 클릭 시 닫기
+window.addEventListener('click', (e) => {
+  if (menuPopup.style.display === 'block' && !menuPopup.contains(e.target) && e.target !== menuBtn) {
+    menuPopup.style.display = 'none';
+  }
+});
+
+// --- 다시 시작 버튼 생성 및 제어 ---
+let restartBtn = null;
+function showRestartButton() {
+  if (!restartBtn) {
+    restartBtn = document.createElement('button');
+    restartBtn.textContent = '다시 시작';
+    restartBtn.style.position = 'fixed';
+    restartBtn.style.left = '50%';
+    restartBtn.style.top = 'calc(50% + 38px)';
+    restartBtn.style.transform = 'translate(-50%, 0)';
+    restartBtn.style.fontSize = '1.25rem';
+    restartBtn.style.fontWeight = 'bold';
+    restartBtn.style.background = '#ff5e57';
+    restartBtn.style.color = '#fff';
+    restartBtn.style.border = 'none';
+    restartBtn.style.borderRadius = '12px';
+    restartBtn.style.padding = '14px 38px';
+    restartBtn.style.boxShadow = '0 2px 12px #0003';
+    restartBtn.style.cursor = 'pointer';
+    restartBtn.style.zIndex = '10001';
+    restartBtn.style.transition = 'background 0.18s, transform 0.08s';
+    restartBtn.style.fontFamily = "'Jua', sans-serif";
+    restartBtn.onclick = () => {
+      restartBtn.classList.add('pressed');
+      setTimeout(() => restartBtn.classList.remove('pressed'), 120);
+      startGame();
+      hideRestartButton();
+    };
+    restartBtn.onmousedown = () => restartBtn.classList.add('pressed');
+    restartBtn.onmouseup = () => setTimeout(() => restartBtn.classList.remove('pressed'), 120);
+    restartBtn.onmouseleave = () => restartBtn.classList.remove('pressed');
+    // pressed 효과 CSS
+    if (!document.getElementById('restart-btn-style')) {
+      const style = document.createElement('style');
+      style.id = 'restart-btn-style';
+      style.innerHTML = '.restart-pressed {transform: translateY(8px) !important; background: #e55 !important;}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(restartBtn);
+  }
+  restartBtn.style.display = 'block';
+}
+function hideRestartButton() {
+  if (restartBtn) restartBtn.style.display = 'none';
+}
+
+// --- 시작 ---
+window.onload = () => {
+  startGame();
+  setupInput();
+  requestAnimationFrame(gameLoop);
+};
+  </script>
+</body>
+</html> 

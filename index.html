@@ -25,18 +25,15 @@
         }
 
         html, body {
-            overflow: hidden;
+            overflow: auto;
+            height: 100vh;
         }
 
         body {
+            /* 기존 flex 삭제, 중앙정렬은 main-wrap에서 */
             font-family: 'Jua', 'Nanum Pen Script', 'Noto Sans KR', sans-serif;
             background: linear-gradient(135deg, #fff6f0 0%, #ffe5d0 100%);
             color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            height: 100vh;
             margin: 0;
             padding: 20px;
             gap: 30px;
@@ -392,51 +389,79 @@
 </head>
 <body>
     <div id="custom-modal-bg" style="display:none;"></div>
-
-    <!-- 타이머 영역 -->
-    <div class="main-container">
-        <h1>뽀모도로 타이머</h1>
-        <div class="wave-underline">
-            <svg viewBox="0 0 220 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 8 Q 11 16, 22 8 T 44 8 T 66 8 T 88 8 T 110 8 T 132 8 T 154 8 T 176 8 T 198 8 T 220 8" stroke="#ffb4a2" stroke-width="3" fill="none"/>
-            </svg>
-        </div>
-        <div class="status-display" id="status-display">작업을 추가하고 시작하세요</div>
-        <div id="timer-canvas-wrapper">
-            <canvas id="timer-canvas" width="300" height="300"></canvas>
-        </div>
-        <input type="file" id="file-input" accept="image/*">
-        <div class="controls">
-            <button id="start-btn">시작</button>
-            <button id="pause-btn" disabled>일시정지</button>
-            <button id="reset-btn" disabled>초기화</button>
-        </div>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+      <div style="width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;">
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+      </div>
     </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+      <div style="font-size:1.08rem;font-weight:bold;color:#ff5e57;margin-bottom:10px;">메뉴</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='index.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">뽀모도로 타이머</div>
+      <div style="cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='infinitedStairs.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">무한의 계단</div>
+    </div>
+<style>
+#menu-hamburger:hover {
+  background: rgba(255,255,255,0.18) !important;
+}
+</style>
 
-    <!-- 작업 관리 영역 -->
-    <div class="task-container">
-        <h2>작업 관리</h2>
-        <div class="wave-underline">
-            <svg viewBox="0 0 220 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0 8 Q 11 16, 22 8 T 44 8 T 66 8 T 88 8 T 110 8 T 132 8 T 154 8 T 176 8 T 198 8 T 220 8" stroke="#ffb4a2" stroke-width="3" fill="none"/>
-            </svg>
+    <div class="main-wrap" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;width:100vw;">
+      <!-- 설명 문구 (카드 바로 위, 2줄) -->
+      <div id="pomodoro-desc" style="width:100%;text-align:center;margin-bottom:18px;margin-top:0;">
+        <span style="font-size:1.05rem;color:var(--subtle-text-color);font-family:'Jua','Nanum Pen Script','Noto Sans KR',sans-serif;font-weight:500;line-height:1.7;">
+          뽀모도로 타이머로 집중력 UP!<br/>
+          25분 집중 + 5분 휴식, 반복하며 할 일을 완수하세요.
+        </span>
+      </div>
+      <div style="display:flex;gap:30px;flex-wrap:wrap;justify-content:center;align-items:stretch;">
+        <!-- 타이머 영역 -->
+        <div class="main-container">
+            <h1>뽀모도로 타이머</h1>
+            <div class="wave-underline">
+                <svg viewBox="0 0 220 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 8 Q 11 16, 22 8 T 44 8 T 66 8 T 88 8 T 110 8 T 132 8 T 154 8 T 176 8 T 198 8 T 220 8" stroke="#ffb4a2" stroke-width="3" fill="none"/>
+                </svg>
+            </div>
+            <div class="status-display" id="status-display">작업을 추가하고 시작하세요</div>
+            <div id="timer-canvas-wrapper">
+                <canvas id="timer-canvas" width="300" height="300"></canvas>
+            </div>
+            <input type="file" id="file-input" accept="image/*">
+            <div class="controls">
+                <button id="start-btn">시작</button>
+                <button id="pause-btn" disabled>일시정지</button>
+                <button id="reset-btn" disabled>초기화</button>
+            </div>
         </div>
-        <div class="task-input-area">
-            <input type="text" id="task-input" placeholder="새 작업을 입력하세요">
-            <button id="add-task-btn">+</button>
-        </div>
-        <div class="task-lists-container">
-            <div class="task-lists">
-                <div class="task-list-wrapper">
-                    <h3>할 일</h3>
-                    <ul id="todo-list" class="task-list"></ul>
-                </div>
-                <div class="task-list-wrapper">
-                    <h3>한 일</h3>
-                    <ul id="done-list" class="task-list"></ul>
+        <!-- 작업 관리 영역 -->
+        <div class="task-container">
+            <h2>작업 관리</h2>
+            <div class="wave-underline">
+                <svg viewBox="0 0 220 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M0 8 Q 11 16, 22 8 T 44 8 T 66 8 T 88 8 T 110 8 T 132 8 T 154 8 T 176 8 T 198 8 T 220 8" stroke="#ffb4a2" stroke-width="3" fill="none"/>
+                </svg>
+            </div>
+            <div class="task-input-area">
+                <input type="text" id="task-input" placeholder="새 작업을 입력하세요">
+                <button id="add-task-btn">+</button>
+            </div>
+            <div class="task-lists-container">
+                <div class="task-lists">
+                    <div class="task-list-wrapper">
+                        <h3>할 일</h3>
+                        <ul id="todo-list" class="task-list"></ul>
+                    </div>
+                    <div class="task-list-wrapper">
+                        <h3>한 일</h3>
+                        <ul id="done-list" class="task-list"></ul>
+                    </div>
                 </div>
             </div>
         </div>
+      </div>
     </div>
 
     <script>
@@ -629,6 +654,8 @@
 
         // --- 타이머 로직 ---
         let alarmPlayed = false;
+        let blinkInterval = null;
+        let blinkStep = 0;
         function mainLoop() {
             if (state === 'paused' || state === 'stopped') return;
             // 실제 경과 시간 기반 계산
@@ -644,6 +671,18 @@
             if (timeRemaining === 0 && !alarmPlayed) {
                 alarmSound.play();
                 alarmPlayed = true;
+                // --- 타이틀 반짝임 시작 ---
+                if (!blinkInterval) {
+                    blinkStep = 0;
+                    blinkInterval = setInterval(() => {
+                        blinkStep++;
+                        if (blinkStep % 2 === 0) {
+                            document.title = '⏰ 뽀모도로 종료!';
+                        } else {
+                            document.title = '✨ 뽀모도로 종료!';
+                        }
+                    }, 800);
+                }
             }
             if (timeRemaining <= 0) {
                 switchState();
@@ -681,6 +720,12 @@
         }
 
         function switchState() {
+            // 상태 전환 시 타이틀 반짝임 해제
+            if (blinkInterval) {
+                clearInterval(blinkInterval);
+                blinkInterval = null;
+                document.title = statusDisplay.textContent;
+            }
             if (state === 'work') {
                 const currentTaskEl = todoList.querySelector('li');
                 if (currentTaskEl) {
@@ -819,6 +864,12 @@
             statusDisplay.textContent = '작업을 추가하고 시작하세요';
             document.title = '뽀모도로 타이머';
             updatePomodoroDisplay();
+            // 타이틀 반짝임 해제
+            if (blinkInterval) {
+                clearInterval(blinkInterval);
+                blinkInterval = null;
+                document.title = '뽀모도로 타이머';
+            }
         }
 
         function updateButtonStates() {
@@ -987,6 +1038,20 @@
         addTaskBtn.addEventListener('click', addTask);
         taskInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') addTask();
+        });
+
+        // 햄버거 메뉴 동작
+        const menuBtn = document.getElementById('menu-hamburger');
+        const menuPopup = document.getElementById('menu-popup');
+        menuBtn.onclick = (e) => {
+          e.stopPropagation();
+          menuPopup.style.display = (menuPopup.style.display === 'none' || menuPopup.style.display === '') ? 'block' : 'none';
+        };
+        // 메뉴 바깥 클릭 시 닫기
+        window.addEventListener('click', (e) => {
+          if (menuPopup.style.display === 'block' && !menuPopup.contains(e.target) && e.target !== menuBtn) {
+            menuPopup.style.display = 'none';
+          }
         });
 
         // --- 초기화 ---
