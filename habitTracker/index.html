@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Habit Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span>Habit Tracker</span>
+            </div>
+            
+             <!-- Navigation Menu -->
+            <ul class="nav-menu" id="nav-menu">
+                <li class="nav-item">
+                    <a href="../index.html" class="nav-link">Pomodoro Timer</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../infiniteStairs.html" class="nav-link">Infinite Stairs</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../website.html" class="nav-link">Website</a>
+                </li>
+                
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <main>
+            <div class="main-layout">
+                <!-- Left Side: Add Habit & Habits List -->
+                <div class="left-panel">
+                    <!-- Add Habit Section -->
+                    <section class="add-habit-section">
+                        <div class="input-group">
+                            <input type="text" id="habitInput" placeholder="Enter a new habit..." maxlength="50">
+                            <button id="addHabitBtn">Add Habit</button>
+                        </div>
+                    </section>
+                    
+                    <!-- Habits List Section -->
+                    <section class="habits-section">
+                        <div class="habits-header">
+                            <h2>My Habits</h2>
+                            <div class="toggle-all-checkbox" id="toggleAllCheckbox" onclick="habitTracker.toggleAllHabits()">
+                                <span class="toggle-all-text">Toggle All</span>
+                            </div>
+                        </div>
+                        <div id="habitsList" class="habits-list">
+                            <!-- Habits will be dynamically added here -->
+                        </div>
+                    </section>
+                </div>
+                
+                <!-- Right Side: Calendar Section -->
+                <div class="right-panel">
+                    <section class="calendar-section">
+                        <div class="calendar-header">
+                            <button id="prevMonthBtn" class="nav-btn">❮</button>
+                            <h2 id="monthYear"></h2>
+                            <button id="nextMonthBtn" class="nav-btn">❯</button>
+                        </div>
+                        
+                        <div class="calendar-grid">
+                            <div class="day-header">Sun</div>
+                            <div class="day-header">Mon</div>
+                            <div class="day-header">Tue</div>
+                            <div class="day-header">Wed</div>
+                            <div class="day-header">Thu</div>
+                            <div class="day-header">Fri</div>
+                            <div class="day-header">Sat</div>
+                            
+                            <div id="calendarDays" class="calendar-days">
+                                <!-- Calendar days will be dynamically generated here -->
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Custom Popup Modal -->
+        <div id="habitModal" class="modal">
+            <div class="modal-content">
+                <h3 id="modalTitle">Edit Habit</h3>
+                <input type="text" id="modalInput" placeholder="Enter habit name">
+                <div class="modal-buttons">
+                    <button id="modalSave" class="modal-btn save-btn">Save</button>
+                    <button id="modalDelete" class="modal-btn delete-btn">Delete</button>
+                    <button id="modalCancel" class="modal-btn cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
