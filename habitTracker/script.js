@@ -18,6 +18,13 @@ class HabitTracker {
         this.currentDate = new Date();
         this.completedDates = {};
         this.currentEditingHabit = null;
+        this.dragSelecting = false;
+        this.dragSelectedDates = new Set();
+        this.dragAction = null; // 'check' or 'uncheck'
+        this.rangeSelecting = false;
+        this.rangeStartDate = null;
+        this.rangeEndDate = null;
+        this.selectedRange = null; // [start, end] ISO string
         
         this.init();
     }
@@ -157,12 +164,11 @@ class HabitTracker {
         const selectedDate = new Date(dateStr + 'T00:00:00');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
         if (selectedDate > today) {
             return; // Don't allow selecting future dates
         }
-        
         this.selectedDate = dateStr;
+        this.selectedRange = null; // 단일 선택 시 다중 선택 해제
         this.renderHabits();
         this.renderCalendar();
     }
@@ -252,15 +258,28 @@ class HabitTracker {
             return;
         }
         
-        const targetDate = this.selectedDate || new Date().toISOString().split('T')[0];
+        // 범위 선택이 있으면 그 범위, 아니면 단일 날짜
+        let range = this.selectedRange;
+        let targetDate = this.selectedDate || new Date().toISOString().split('T')[0];
+        let rangeDates = [];
+        if (range) {
+            let d = new Date(range[0]);
+            const end = new Date(range[1]);
+            while (d <= end) {
+                rangeDates.push(d.toISOString().split('T')[0]);
+                d.setDate(d.getDate() + 1);
+            }
+        } else {
+            rangeDates = [targetDate];
+        }
         
         habitsList.innerHTML = this.habits.map(habit => {
-            const isCompleted = this.completedDates[habit.id] && this.completedDates[habit.id][targetDate];
+            const allChecked = rangeDates.every(dateStr => this.completedDates[habit.id] && this.completedDates[habit.id][dateStr]);
             const progressData = this.calculateMonthlyProgress(habit.id);
             
             return `
                 <div class="habit-item" 
-                     onclick="habitTracker.toggleHabitForDate('${habit.id}', '${targetDate}')"
+                     onclick="habitTracker.toggleHabitForRange('${habit.id}')"
                      onmousedown="habitTracker.startLongPress('${habit.id}')"
                      onmouseup="habitTracker.endLongPress()"
                      onmouseleave="habitTracker.endLongPress()"
@@ -275,8 +294,8 @@ class HabitTracker {
                             </div>
                         </div>
                     </div>
-                    <div class="habit-checkbox ${isCompleted ? 'checked' : ''}" 
-                         onclick="event.stopPropagation(); habitTracker.toggleHabitForDate('${habit.id}', '${targetDate}')">
+                    <div class="habit-checkbox ${allChecked ? 'checked' : ''}" 
+                         onclick="event.stopPropagation(); habitTracker.toggleHabitForRange('${habit.id}')">
                     </div>
                 </div>
             `;
@@ -368,8 +387,8 @@ class HabitTracker {
                 });
             }
             
-            // Add selected class if this is the selected date
-            if (this.selectedDate === dateStr) {
+            // 다중 선택 중이 아니고, selectedDate가 존재할 때만 .selected 추가
+            if ((!this.selectedRange || this.selectedRange.length === 0) && this.selectedDate && this.selectedDate === dateStr) {
                 dayClass += ' selected';
             }
             
@@ -389,6 +408,8 @@ class HabitTracker {
         
         // Add instructions if no habit is selected
         this.updateInstructions();
+        // 드래그 다중 선택 이벤트 바인딩
+        this.setupCalendarRangeEvents();
     }
     
     updateInstructions() {
@@ -435,14 +456,24 @@ class HabitTracker {
             toggleAllCheckbox.style.display = 'none';
             return;
         }
-        
         toggleAllCheckbox.style.display = 'flex';
-        
-        // Check if all habits are completed for the target date
+        // 범위 선택이 있으면 그 범위, 아니면 단일 날짜
+        let range = this.selectedRange;
+        let rangeDates = [];
+        if (range) {
+            let d = new Date(range[0]);
+            const end = new Date(range[1]);
+            while (d <= end) {
+                rangeDates.push(d.toISOString().split('T')[0]);
+                d.setDate(d.getDate() + 1);
+            }
+        } else {
+            rangeDates = [targetDate];
+        }
+        // Check if all habits are completed for the 범위
         const allCompleted = this.habits.every(habit => 
-            this.completedDates[habit.id] && this.completedDates[habit.id][targetDate]
+            rangeDates.every(dateStr => this.completedDates[habit.id] && this.completedDates[habit.id][dateStr])
         );
-        
         if (allCompleted) {
             toggleAllCheckbox.classList.add('all-checked');
             toggleAllCheckbox.querySelector('.toggle-all-text').textContent = 'Uncheck All';
@@ -451,35 +482,44 @@ class HabitTracker {
             toggleAllCheckbox.querySelector('.toggle-all-text').textContent = 'Check All';
         }
     }
-    
     toggleAllHabits() {
         if (this.habits.length === 0) return;
-        
-        const targetDate = this.selectedDate || new Date().toISOString().split('T')[0];
-        
-        // Check if all habits are completed
+        let range = this.selectedRange;
+        let targetDate = this.selectedDate || new Date().toISOString().split('T')[0];
+        let rangeDates = [];
+        if (range) {
+            let d = new Date(range[0]);
+            const end = new Date(range[1]);
+            while (d <= end) {
+                rangeDates.push(d.toISOString().split('T')[0]);
+                d.setDate(d.getDate() + 1);
+            }
+        } else {
+            rangeDates = [targetDate];
+        }
+        // Check if all habits are completed for the 범위
         const allCompleted = this.habits.every(habit => 
-            this.completedDates[habit.id] && this.completedDates[habit.id][targetDate]
+            rangeDates.every(dateStr => this.completedDates[habit.id] && this.completedDates[habit.id][dateStr])
         );
-        
-        // Toggle all habits
         this.habits.forEach(habit => {
             if (!this.completedDates[habit.id]) {
                 this.completedDates[habit.id] = {};
             }
-            
-            if (allCompleted) {
-                // Uncheck all
-                delete this.completedDates[habit.id][targetDate];
-            } else {
-                // Check all
-                this.completedDates[habit.id][targetDate] = true;
-            }
+            rangeDates.forEach(dateStr => {
+                if (allCompleted) {
+                    delete this.completedDates[habit.id][dateStr];
+                } else {
+                    this.completedDates[habit.id][dateStr] = true;
+                }
+            });
         });
-        
         this.saveToStorage();
         this.renderHabits();
         this.renderCalendar();
+        // 선택 범위 하이라이트 복원
+        if (this.selectedRange) {
+            this.highlightRange(this.selectedRange[0], this.selectedRange[1]);
+        }
     }
     
     previousMonth() {
@@ -516,6 +556,125 @@ class HabitTracker {
             }
         }
     }
+
+    setupCalendarRangeEvents() {
+        const calendarDays = document.getElementById('calendarDays');
+        if (!calendarDays) return;
+        const dayEls = calendarDays.querySelectorAll('.calendar-day:not(.future-date)');
+        let isDragging = false;
+        let dragStart = null;
+        let dragEnd = null;
+        // 마우스 이벤트
+        dayEls.forEach(dayEl => {
+            dayEl.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                isDragging = true;
+                dragStart = dayEl.getAttribute('data-date');
+                dragEnd = dragStart;
+                this.highlightRange(dragStart, dragEnd);
+                document.body.classList.add('noselect');
+            });
+            dayEl.addEventListener('mouseenter', (e) => {
+                if (!isDragging) return;
+                dragEnd = dayEl.getAttribute('data-date');
+                this.highlightRange(dragStart, dragEnd);
+            });
+            dayEl.addEventListener('mouseup', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                dragEnd = dayEl.getAttribute('data-date');
+                this.selectedRange = [dragStart, dragEnd].sort();
+                this.highlightRange(dragStart, dragEnd);
+                document.body.classList.remove('noselect');
+                this.renderHabits();
+            });
+            // 달력의 다른 날짜 클릭 시 다중 선택 해제
+            dayEl.addEventListener('click', (e) => {
+                if (!this.selectedRange) return;
+                const dateStr = dayEl.getAttribute('data-date');
+                // 범위 밖을 클릭하면 해제
+                if (dateStr < this.selectedRange[0] || dateStr > this.selectedRange[1]) {
+                    this.selectedRange = null;
+                    this.highlightRange(null, null);
+                    this.renderHabits();
+                }
+            });
+        });
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                this.selectedRange = [dragStart, dragEnd].sort();
+                this.highlightRange(dragStart, dragEnd);
+                document.body.classList.remove('noselect');
+                this.renderHabits();
+            }
+        });
+    }
+
+    applyDragSelection(dateSet, action) {
+        if (!dateSet || !action) return;
+        dateSet.forEach(dateStr => {
+            this.habits.forEach(habit => {
+                if (!this.completedDates[habit.id]) this.completedDates[habit.id] = {};
+                if (action === 'check') {
+                    this.completedDates[habit.id][dateStr] = true;
+                } else {
+                    delete this.completedDates[habit.id][dateStr];
+                }
+            });
+        });
+        this.saveToStorage();
+        this.renderHabits();
+        this.renderCalendar();
+    }
+
+    highlightRange(start, end) {
+        const calendarDays = document.getElementById('calendarDays');
+        if (!calendarDays) return;
+        const dayEls = calendarDays.querySelectorAll('.calendar-day');
+        let inRange = false;
+        const [from, to] = [start, end].sort();
+        dayEls.forEach(dayEl => {
+            const dateStr = dayEl.getAttribute('data-date');
+            if (dateStr === from) inRange = true;
+            if (inRange) dayEl.classList.add('drag-selecting');
+            else dayEl.classList.remove('drag-selecting');
+            if (dateStr === to) inRange = false;
+        });
+    }
+
+    toggleHabitForRange(habitId) {
+        let range = this.selectedRange;
+        let targetDate = this.selectedDate || new Date().toISOString().split('T')[0];
+        let rangeDates = [];
+        if (range) {
+            let d = new Date(range[0]);
+            const end = new Date(range[1]);
+            while (d <= end) {
+                rangeDates.push(d.toISOString().split('T')[0]);
+                d.setDate(d.getDate() + 1);
+            }
+        } else {
+            rangeDates = [targetDate];
+        }
+        // 현재 범위 내 모두 체크되어 있으면 해제, 아니면 모두 체크
+        const allChecked = rangeDates.every(dateStr => this.completedDates[habitId] && this.completedDates[habitId][dateStr]);
+        rangeDates.forEach(dateStr => {
+            if (!this.completedDates[habitId]) this.completedDates[habitId] = {};
+            if (allChecked) {
+                delete this.completedDates[habitId][dateStr];
+            } else {
+                this.completedDates[habitId][dateStr] = true;
+            }
+        });
+        this.saveToStorage();
+        this.renderHabits();
+        this.renderCalendar();
+        // 선택 범위 하이라이트 복원
+        if (this.selectedRange) {
+            this.highlightRange(this.selectedRange[0], this.selectedRange[1]);
+        }
+    }
 }
 
 // Initialize the application when the page loads
@@ -524,3 +683,7 @@ let habitTracker;
 document.addEventListener('DOMContentLoaded', () => {
     habitTracker = new HabitTracker();
 });
+
+// window에 바인딩
+window.habitTracker = new HabitTracker();
+window.toggleHabitForRange = function(habitId) { window.habitTracker.toggleHabitForRange(habitId); };
