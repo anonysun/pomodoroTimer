@@ -5,10 +5,10 @@ class HabitTracker {
         this.colors = [
             '#FF6B6B', // Coral Red
             '#4ECDC4', // Teal
-            '#45B7D1', // Sky Blue
             '#FFA726', // Orange
             '#66BB6A', // Green
-            '#AB47BC'  // Purple
+            '#AB47BC',  // Purple
+            '#45B7D1' // Sky Blue
         ];
         
         this.maxHabits = 6;
