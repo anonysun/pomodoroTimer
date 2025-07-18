@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수업 후 만족도 설문조사</title>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <!-- 네비게이션 메뉴 (햄버거 포함) -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <span>설문조사</span>
+      </div>
+      <ul class="nav-menu" id="nav-menu">
+        <li class="nav-item"><a href="../index.html" class="nav-link">Pomodoro Timer</a></li>
+        <li class="nav-item"><a href="../infiniteStairs.html" class="nav-link">Infinite Stairs</a></li>
+        <li class="nav-item"><a href="../website.html" class="nav-link">Website</a></li>
+        <li class="nav-item"><a href="../habitTracker/index.html" class="nav-link">Habit Tracker</a></li>
+      </ul>
+      <div class="hamburger">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </nav>
+  <div class="survey-container" style="margin-top:60px;">
+    <h1>수업 후 만족도 설문조사</h1>
+    <form id="survey-form">
+      <div class="question">
+        <label>1. 수업 내용이 이해하기 쉬웠나요?</label>
+        <div class="options">
+          <label><input type="radio" name="q1" value="매우 그렇다" required> 매우 그렇다</label>
+          <label><input type="radio" name="q1" value="그렇다"> 그렇다</label>
+          <label><input type="radio" name="q1" value="보통이다"> 보통이다</label>
+          <label><input type="radio" name="q1" value="아니다"> 아니다</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>2. 강사의 설명이 충분했나요?</label>
+        <div class="options">
+          <label><input type="radio" name="q2" value="매우 그렇다" required> 매우 그렇다</label>
+          <label><input type="radio" name="q2" value="그렇다"> 그렇다</label>
+          <label><input type="radio" name="q2" value="보통이다"> 보통이다</label>
+          <label><input type="radio" name="q2" value="아니다"> 아니다</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>3. 수업 자료(교재/슬라이드 등)는 도움이 되었나요?</label>
+        <div class="options">
+          <label><input type="radio" name="q3" value="매우 그렇다" required> 매우 그렇다</label>
+          <label><input type="radio" name="q3" value="그렇다"> 그렇다</label>
+          <label><input type="radio" name="q3" value="보통이다"> 보통이다</label>
+          <label><input type="radio" name="q3" value="아니다"> 아니다</label>
+        </div>
+      </div>
+      <div class="question">
+        <label>4. 추가로 남기고 싶은 의견이 있다면 자유롭게 작성해 주세요.</label>
+        <textarea name="q4" rows="3" placeholder="의견(선택사항)"></textarea>
+      </div>
+      <button type="submit" class="submit-btn">제출하기</button>
+    </form>
+    <div id="survey-message" class="survey-message"></div>
+  </div>
+  <script src="survey.js"></script>
+</script>
+  <script src="nav.js"></script>
+</body>
+</html>

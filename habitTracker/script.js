@@ -678,12 +678,7 @@ class HabitTracker {
 }
 
 // Initialize the application when the page loads
-let habitTracker;
-
 document.addEventListener('DOMContentLoaded', () => {
-    habitTracker = new HabitTracker();
+    window.habitTracker = new HabitTracker();
+    window.toggleHabitForRange = function(habitId) { window.habitTracker.toggleHabitForRange(habitId); };
 });
-
-// window에 바인딩
-window.habitTracker = new HabitTracker();
-window.toggleHabitForRange = function(habitId) { window.habitTracker.toggleHabitForRange(habitId); };
