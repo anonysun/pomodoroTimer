@@ -16,10 +16,40 @@ function setSurveyCookie() {
   document.cookie = 'survey_submitted=1; expires=' + d.toUTCString() + '; path=/';
 }
 
+function deleteSurveyCookie() {
+  document.cookie = 'survey_submitted=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+}
+
+function showRetryButton() {
+  let btn = document.getElementById('retry-survey-btn');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'retry-survey-btn';
+    btn.textContent = '설문 다시하기';
+    btn.style.marginTop = '32px';
+    btn.style.background = '#ffb4a2';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '20px';
+    btn.style.padding = '10px 24px';
+    btn.style.fontSize = '1rem';
+    btn.style.fontFamily = 'Jua, sans-serif';
+    btn.style.cursor = 'pointer';
+    btn.onclick = function() {
+      deleteSurveyCookie();
+      form.style.display = '';
+      messageDiv.textContent = '';
+      btn.remove();
+    };
+    messageDiv.appendChild(btn);
+  }
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (hasSubmittedSurvey()) {
     messageDiv.textContent = '이미 설문에 참여하셨습니다.';
+    showRetryButton();
     return;
   }
   const data = new FormData(form);
@@ -39,6 +69,7 @@ form.addEventListener('submit', async (e) => {
     messageDiv.textContent = '설문이 성공적으로 제출되었습니다. 감사합니다!';
     form.reset();
     form.style.display = 'none';
+    showRetryButton();
   } catch (err) {
     messageDiv.textContent = '제출 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
   }
@@ -47,4 +78,5 @@ form.addEventListener('submit', async (e) => {
 if (hasSubmittedSurvey()) {
   form.style.display = 'none';
   messageDiv.textContent = '이미 설문에 참여하셨습니다.';
+  showRetryButton();
 }

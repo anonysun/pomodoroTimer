@@ -139,9 +139,9 @@
     <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='website.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">웹사이트</div>
     <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='index.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">뽀모도로 타이머</div>
     <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='habitTracker/index.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">습관추적기</div>
-    <!-- <div style="cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='infiniteStairs.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">무한의 계단</div> -->
+    <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='survey/index.html'" onmouseover="this.style.background='#ffe5d0'" onmouseout="this.style.background='none'">설문조사</div>
   </div>
-  <div id="score"><span style="font-size:1.1rem;opacity:0.7;letter-spacing:1.5px;">SCORE :</span> <span id="score-value">0</span></div>
+  <div id="score"><span style="font-size:1.1rem;opacity:0.7;letter-spacing:1.5px;">SCORE :</span> <span id="score-value">0</span> <span id="high-score" style="font-size:1.1rem;opacity:0.7;letter-spacing:1.5px;margin-left:18px;">최고 : 0</span></div>
   <div id="game-container">
     <canvas id="game-canvas" width="400" height="600"></canvas>
   </div>
@@ -174,6 +174,10 @@ const STAIR_COLORS = ['#b8b8b8', '#e0e0e0'];
 const CHAR_COLORS = ['#222', '#fff', '#e55', '#5af', '#fa0'];
 const FPS = 60;
 const ANIM_FRAMES = 8; // 이동 애니메이션 프레임 수
+const MAX_X = 6; // 계단 x좌표 최대값(0~6만 허용)
+// 최고 점수 저장용 키
+const HIGH_SCORE_KEY = 'infiniteStairsHighScore';
+let highScore = 0;
 
 // --- 게임 상태 ---
 let stairs = [];
@@ -196,18 +200,39 @@ function genStairs(initN, startX, startY) {
   let x = startX, y = startY;
   let dir = 1; // 1: 오른쪽, -1: 왼쪽
   const minX = 0;
-  const maxX = Math.floor(CANVAS_W / TILE) - 1;
+  const maxX = MAX_X;
   for (let i = 0; i < initN; i++) {
-    arr.push({x, y, dir});
+    // x좌표 강제 보정
+    x = Math.max(minX, Math.min(maxX, x));
+    if (arr.some(s => s.x === x && s.y === y)) {
+      // 가능한 x좌표 후보
+      const candidates = [];
+      for (let cx = minX; cx <= maxX; cx++) {
+        if (!arr.some(s => s.x === cx && s.y === y)) {
+          candidates.push(cx);
+        }
+      }
+      if (candidates.length > 0) {
+        x = candidates[Math.floor(Math.random() * candidates.length)];
+        arr.push({x, y, dir});
+      } else {
+        // 모든 x에 계단이 있으면 y를 한 칸 더 내림
+        arr.push({x, y: y + 1, dir});
+      }
+    } else {
+      arr.push({x, y, dir});
+    }
     if (Math.random() < 0.5) {
       dir *= -1;
     }
-    // 화면 밖으로 나가면 방향 반전
-    if (x + dir < minX || x + dir > maxX) dir *= -1;
-    x += dir;
-    // x가 범위를 벗어나면 강제로 보정
-    if (x < minX) x = minX;
-    if (x > maxX) x = maxX;
+    // 다음 x 계산
+    let nextX = x + dir;
+    // 방향 전환 필요시
+    if (nextX < minX || nextX > maxX) {
+      dir *= -1;
+      nextX = x + dir;
+    }
+    x = Math.max(minX, Math.min(maxX, nextX));
     y += 1; // 아래로 생성
   }
   return arr;
@@ -255,18 +280,34 @@ function addStair() {
   let dir = last.dir;
   if (Math.random() < 0.5) dir *= -1;
   const minX = 0;
-  const maxX = Math.floor(CANVAS_W / TILE) - 1;
-  let x = last.x + dir;
-  // 화면 밖으로 나가면 방향 반전
-  if (x < minX || x > maxX) {
+  const maxX = MAX_X;
+  let nextX = last.x + dir;
+  // 방향 전환 필요시
+  if (nextX < minX || nextX > maxX) {
     dir *= -1;
-    x = last.x + dir;
+    nextX = last.x + dir;
   }
-  // x가 범위를 벗어나면 강제로 보정
-  if (x < minX) x = minX;
-  if (x > maxX) x = maxX;
+  // x좌표 강제 보정
+  nextX = Math.max(minX, Math.min(maxX, nextX));
   const y = last.y + 1; // 아래로
-  stairs.push({x, y, dir});
+  if (stairs.some(s => s.x === nextX && s.y === y)) {
+    // 가능한 x좌표 후보
+    const candidates = [];
+    for (let x = minX; x <= maxX; x++) {
+      if (!stairs.some(s => s.x === x && s.y === y)) {
+        candidates.push(x);
+      }
+    }
+    if (candidates.length > 0) {
+      nextX = candidates[Math.floor(Math.random() * candidates.length)];
+      stairs.push({x: nextX, y, dir});
+    } else {
+      // 모든 x에 계단이 있으면 y를 한 칸 더 내림
+      stairs.push({x: last.x, y: y + 1, dir});
+    }
+  } else {
+    stairs.push({x: nextX, y, dir});
+  }
 }
 
 // --- 계단 존재 여부 ---
@@ -361,6 +402,12 @@ function turnDir() {
 // --- 게임 오버 ---
 function endGame() {
   gameOver = true;
+  // 최고 점수 갱신
+  if (score > highScore) {
+    highScore = score;
+    saveHighScore();
+    updateHighScoreDisplay();
+  }
   // startGame 등 자동 호출 제거 (이미 없음)
 }
 
@@ -374,6 +421,7 @@ function startGame() {
   animFrame = 0;
   cameraOffsetY = 0;
   document.getElementById('score-value').textContent = score;
+  updateHighScoreDisplay();
   for (let i = 0; i < 20; i++) addStair();
 }
 
@@ -405,8 +453,18 @@ function drawChar(sx, sy, dir) {
 
 // --- 계단 그리기 ---
 function drawStairs() {
+  const minX = 0;
+  const maxX = MAX_X;
+  // 현재 플레이어가 밟고 있는 계단 정보만 출력
+  if (player && typeof player.stairIdx === 'number' && stairs[player.stairIdx]) {
+    const cur = stairs[player.stairIdx];
+    console.log(`[플레이어 위치] stairIdx:${player.stairIdx} x:${cur.x} y:${cur.y} dir:${cur.dir}`);
+  }
   for (let i = 0; i < stairs.length; i++) {
     const s = stairs[i];
+    if (s.x < minX || s.x > maxX) {
+      console.warn('화면을 벗어나는 계단:', s, 'index:', i);
+    }
     const {sx, sy} = stairToScreen(s.x, s.y);
     // 화면 안에 있을 때만 그리기
     if (sx >= 0 && sx <= CANVAS_W) {
@@ -606,8 +664,22 @@ function hideRestartButton() {
   if (restartBtn) restartBtn.style.display = 'none';
 }
 
+// --- 최고 점수 표시 및 저장 ---
+function updateHighScoreDisplay() {
+  document.getElementById('high-score').textContent = `최고 : ${highScore}`;
+}
+function loadHighScore() {
+  const saved = localStorage.getItem(HIGH_SCORE_KEY);
+  highScore = saved ? parseInt(saved, 10) : 0;
+  updateHighScoreDisplay();
+}
+function saveHighScore() {
+  localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
+}
+
 // --- 시작 ---
 window.onload = () => {
+  loadHighScore();
   startGame();
   setupInput();
   requestAnimationFrame(gameLoop);
