@@ -41,6 +41,8 @@ function showRetryButton() {
       messageDiv.textContent = '';
       btn.remove();
     };
+    // 줄바꿈 후 버튼 추가
+    messageDiv.appendChild(document.createElement('br'));
     messageDiv.appendChild(btn);
   }
 }
@@ -48,7 +50,7 @@ function showRetryButton() {
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (hasSubmittedSurvey()) {
-    messageDiv.textContent = '이미 설문에 참여하셨습니다.';
+    messageDiv.textContent = '이미 설문에 참여하셨습니다.      ';
     showRetryButton();
     return;
   }
