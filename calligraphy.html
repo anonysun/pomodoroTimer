@@ -1,0 +1,2254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘리그라피 합성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jua', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            max-height: 100vh;
+            overflow-y: auto;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 모든 요소에 Jua 폰트 강제 적용 */
+        *, *::before, *::after {
+            font-family: 'Jua', sans-serif !important;
+        }
+        
+        .custom-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .custom-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 90vw;
+            max-height: 90vh;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .custom-modal h3 {
+            font-size: 1.5rem;
+            /* font-weight: bold; */
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .custom-modal p {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .custom-modal button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s;
+        }
+        
+        .custom-modal button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .custom-modal button.secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        
+        .step {
+            display: none;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .step.active {
+            display: block;
+            max-height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .image-preview {
+            max-width: 100%;
+            max-height: 60vh;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 20px auto;
+            display: block;
+            object-fit: contain;
+            object-position: center;
+        }
+        
+        .crop-overlay {
+            position: relative;
+            display: inline-block;
+            border-radius: 10px;
+            overflow: hidden;
+            max-width: 90vw;
+            max-height: 70vh;
+        }
+        
+        .crop-area {
+            position: absolute;
+            border: 2px solid #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            cursor: move;
+            z-index: 5;
+            pointer-events: auto;
+        }
+        
+        .crop-handle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border: 2px solid white;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .crop-handle.nw { top: -10px; left: -10px; cursor: nw-resize; }
+        .crop-handle.ne { top: -10px; right: -10px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -10px; left: -10px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -10px; right: -10px; cursor: se-resize; }
+        
+        .crop-handle.n { top: -10px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .crop-handle.s { bottom: -10px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .crop-handle.w { left: -10px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+        .crop-handle.e { right: -10px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+        
+        .composite-preview-container {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            width: 100% !important;
+            height: calc(100vh - 400px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+            position: static;
+            margin-bottom: 20px;
+            overflow: visible;
+        }
+        
+        .composite-preview {
+            position: relative;
+            display: block;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            background: transparent;
+            margin: 0 auto !important;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            text-align: center;
+            aspect-ratio: auto;
+        }
+        
+        /* 770px 이상에서 컨테이너 크기 고정 */
+        @media (min-width: 770px) {
+            .composite-preview-container {
+                height: calc(100vh - 200px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+                padding: 20px;
+                width: 100% !important;
+            }
+            
+            .composite-preview {
+                max-width: 100%;
+                max-height: 100%;
+                width: 100%;
+                height: 100%;
+            }
+        }
+        
+        /* 1200px 이상에서 더 큰 컨테이너 */
+        @media (min-width: 1200px) {
+            .composite-preview-container {
+                height: calc(100vh - 180px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+                padding: 30px;
+            }
+            
+            .composite-preview {
+                max-width: 100%;
+                max-height: 100%;
+                width: 100%;
+                height: 100%;
+            }
+        }
+        
+        /* 480px 이하에서 모바일 최적화 */
+        @media (max-width: 480px) {
+            .composite-preview-container {
+                height: calc(100vh - 220px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+                padding: 5px;
+            }
+            
+            .composite-preview {
+                max-width: 100%;
+                max-height: 100%;
+                width: 100%;
+                height: 100%;
+            }
+        }
+        
+        .composite-preview .background-image {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            object-position: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        /* 배경 이미지가 컨테이너에 맞게 전체가 보이도록 조정 */
+        .composite-preview {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .composite-preview .calligraphy-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+            cursor: move;
+            background: transparent;
+        }
+        
+        .composite-preview .calligraphy-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .edit-handles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            box-sizing: border-box;
+            z-index: 10;
+            overflow: visible;
+            display: block;
+        }
+        
+        .edit-handles::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #667eea;
+            /* background: rgba(102, 126, 234, 0.1); */
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        
+        /* 편집 핸들이 calligraphy-overlay와 동일한 transform을 가지도록 */
+        .edit-handles {
+            transform-origin: center;
+        }
+        
+        .crop-outline {
+            position: absolute;
+            border: 2px solid #667eea;
+            /* background: rgba(102, 126, 234, 0.1); */
+            pointer-events: none;
+            box-sizing: border-box;
+            z-index: 5;
+        }
+        
+        .edit-handle {
+            position: absolute;
+            width: 40px !important;
+            height: 40px !important;
+            background: #667eea;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+            transition: all 0.2s ease;
+            mix-blend-mode: normal !important;
+            filter: none !important;
+            transform: none !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
+        }
+        
+        .edit-handle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.8);
+            background: #333333;
+        }
+        
+        .edit-handle.scale {
+            bottom: -20px;
+            right: -20px;
+            cursor: se-resize;
+        }
+        
+        .edit-handle.rotate {
+            top: -20px;
+            right: -20px;
+            cursor: grab;
+        }
+        
+        .edit-handle.rotate:active {
+            cursor: grabbing;
+        }
+        
+        /* 아이콘이 부모의 스케일 변환에 영향받지 않도록 */
+        .calligraphy-overlay {
+            transform-origin: center;
+        }
+        
+        .edit-handles {
+            transform-origin: center;
+        }
+        
+        .edit-handle {
+            transform-origin: center !important;
+        }
+        
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #374151;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .control-group input[type="color"] {
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .blend-mode-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .blend-mode-buttons button {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+        
+        .blend-mode-buttons button.active {
+            transform: translateY(-2px);
+        }
+        
+        .blend-mode-buttons button#multiplyMode.active {
+            background: white;
+            color: black;
+        }
+        
+        .blend-mode-buttons button#screenMode {
+            background: black;
+            color: white;
+        }
+        
+        .blend-mode-buttons button#screenMode.active {
+            background: black;
+            color: white;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 15px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background: #f1f5f9;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #667eea;
+            background: #e0e7ff;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+        
+        .back-button:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+            margin-bottom: 0;
+        }
+        
+        .step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            margin: 0 8px;
+            transition: all 0.3s;
+        }
+        
+        .step-dot.active {
+            background: #ffffff;
+            transform: scale(1.2);
+        }
+        
+        .step-dot.completed {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        #menu-hamburger:hover {
+          background: rgba(255,255,255,0.18) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+      <div style="width:26px;height:20px;display:flex;flex-direction:column;justify-content:space-between;">
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+      </div>
+    </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+      <div style="font-size:1.08rem;font-weight:bold;color:#667eea;margin-bottom:10px;">메뉴</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='index.html'" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">뽀모도로 타이머</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='infiniteStairs.html'" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">무한의 계단</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='website.html'" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">웹사이트</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='habitTracker/index.html'" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">습관 추적기</div>
+      <div style="margin-bottom:8px;cursor:pointer;color:#444;padding:7px 0;border-radius:8px;transition:background 0.15s;" onclick="location.href='survey/index.html'" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='none'">설문조사</div>
+    </div>
+    
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-button" onclick="goBack()" style="display: none;">←</button>
+    
+    <!-- 단계 1: 배경 이미지 업로드 -->
+    <div class="step active" id="step1">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
+            
+            <div class="max-w-2xl mx-auto">
+                    <div class="control-panel">
+                        <h2 class="text-xl mb-4 text-center">1. 배경 사진 업로드</h2>
+                        <div class="file-upload-area" onclick="document.getElementById('backgroundInput').click()">
+                            <div class="text-6xl mb-4">🖼️</div>
+                            <p class="text-lg  mb-2">배경 사진을 선택하세요</p>
+                            <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                            <input type="file" id="backgroundInput" accept="image/*" style="display: none;">
+                        </div>
+                        <div id="backgroundPreview" class="mt-4" style="display: none;">
+                            <img id="backgroundImage" class="image-preview" alt="배경 미리보기">
+                        
+                        </div>
+                    </div>
+                    
+                <div class="text-center mt-8" id="nextButtonContainer" style="display: none;">
+                    <button id="nextToStep2" class="bg-white text-purple-600 px-8 py-3 rounded-full  text-lg shadow-lg hover:shadow-xl transition-all">
+                        다음
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 단계 표시기 -->
+            <div class="step-indicator">
+                <div class="step-dot active" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 단계 2: 글씨 이미지 업로드 -->
+    <div class="step" id="step2">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">글씨 사진 업로드</h1>
+            
+            <div class="max-w-2xl mx-auto">
+                    <div class="control-panel">
+                    <h2 class="text-xl mb-4 text-center">2. 글씨 사진 업로드</h2>
+                        <div class="file-upload-area" onclick="document.getElementById('calligraphyInput').click()">
+                            <div class="text-6xl mb-4">✍️</div>
+                            <p class="text-lg  mb-2">글씨 사진을 선택하세요</p>
+                            <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                            <input type="file" id="calligraphyInput" accept="image/*" style="display: none;">
+                        </div>
+                  
+                </div>
+                
+            </div>
+            
+            <!-- 단계 표시기 -->
+            <div class="step-indicator">
+                <div class="step-dot" data-step="1"></div>
+                <div class="step-dot active" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 단계 3: 글씨 사진 보정 및 자르기 -->
+    <div class="step" id="step3">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl  text-center text-white mb-8">글씨 부분 자르기</h1>
+            
+            <div class="max-w-7xl mx-auto">
+                <div class="control-panel">
+                    
+                    <div class="text-center">
+                        <div class="crop-overlay" id="cropContainer">
+                            <img id="processedCalligraphy" class="image-preview" alt="보정된 글씨">
+                            <div class="crop-area" id="cropArea"></div>
+                        </div>
+                        
+                    </div>
+                    
+                    <div class="text-center mt-6">
+                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full  text-lg shadow-lg hover:shadow-xl transition-all">
+                            자르기 완료
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 단계 표시기 -->
+            <div class="step-indicator">
+                <div class="step-dot" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot active" data-step="3"></div>
+                <div class="step-dot" data-step="4"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 단계 4: 사진 합성 및 편집 -->
+    <div class="step" id="step4">
+        <div class="container mx-auto px-4 py-4">
+                        
+            <div class="max-w-6xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- 미리보기 영역 -->
+                    <div class="control-panel">
+                        <div class="control-group mt-4">
+                            <div class="blend-mode-buttons justify-center">
+                                <button id="multiplyMode" class="active bg-white text-black px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all">검은 글씨</button>
+                                <button id="screenMode" class="bg-black text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all">흰 글씨</button>
+                            </div>
+                        </div>
+                        <div class="composite-preview-container">
+                            <div class="composite-preview" id="compositePreview">
+                                <img id="compositeBackground" class="background-image" alt="합성 미리보기">
+                                <div class="calligraphy-overlay" id="calligraphyOverlay">
+                                    <img id="compositeCalligraphy" alt="글씨 오버레이">
+                                </div>
+                                <div class="edit-handles" id="editHandles">
+                                    <div class="edit-handle scale" id="scaleHandle">↘</div>
+                                    <div class="edit-handle rotate" id="rotateHandle">↻</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 색상 및 블렌드 모드 -->
+                        
+                        
+                        <div class="text-center mt-6 space-x-4">
+                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full  text-base shadow-lg hover:shadow-xl transition-all">
+                                다시 시작
+                            </button>
+                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full  text-base shadow-lg hover:shadow-xl transition-all">
+                                다운로드
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 단계 표시기 -->
+            <div class="step-indicator">
+                <div class="step-dot" data-step="1"></div>
+                <div class="step-dot" data-step="2"></div>
+                <div class="step-dot" data-step="3"></div>
+                <div class="step-dot active" data-step="4"></div>
+            </div>
+        </div>
+    </div>
+    
+    
+    <!-- 커스텀 모달 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-modal-content">
+            <h3 id="modalTitle">알림</h3>
+            <p id="modalMessage">메시지가 여기에 표시됩니다.</p>
+            <div>
+                <button id="modalConfirm" onclick="closeModal()">확인</button>
+                <button id="modalCancel" onclick="closeModal()" class="secondary" style="display: none;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let backgroundImage = null;
+        let calligraphyImage = null;
+        let processedCalligraphy = null;
+        let croppedCalligraphy = null;
+        let currentStep = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let currentPosition = { x: 50, y: 50 }; // 퍼센트
+        let currentScale = 0.3; // 배경의 30% 크기로 시작 (더 작게)
+        let currentRotation = 0;
+        let currentBlendMode = 'multiply';
+        // cropArea는 이제 cropSystem.cropArea로 관리됨
+        
+        // DOM 요소
+        const steps = document.querySelectorAll('.step');
+        const stepDots = document.querySelectorAll('.step-dot');
+        const backgroundInput = document.getElementById('backgroundInput');
+        const calligraphyInput = document.getElementById('calligraphyInput');
+        const backgroundPreview = document.getElementById('backgroundPreview');
+        const calligraphyPreview = document.getElementById('calligraphyPreview');
+        const backgroundImageEl = document.getElementById('backgroundImage');
+        const calligraphyImageEl = document.getElementById('calligraphyImage');
+        const processedCalligraphyEl = document.getElementById('processedCalligraphy');
+        const cropContainer = document.getElementById('cropContainer');
+        const compositePreview = document.getElementById('compositePreview');
+        const compositeBackground = document.getElementById('compositeBackground');
+        const compositeCalligraphy = document.getElementById('compositeCalligraphy');
+        const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+        const scaleSlider = document.getElementById('scaleSlider');
+        const rotationSlider = document.getElementById('rotationSlider');
+        const scaleValue = document.getElementById('scaleValue');
+        const rotationValue = document.getElementById('rotationValue');
+        const multiplyMode = document.getElementById('multiplyMode');
+        const screenMode = document.getElementById('screenMode');
+        const customModal = document.getElementById('customModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const modalCancel = document.getElementById('modalCancel');
+        
+        // 이미지 압축 함수
+        function compressImage(file, maxWidth = 1200, quality = 0.8) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+                    canvas.width = img.width * ratio;
+                    canvas.height = img.height * ratio;
+                    
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    canvas.toBlob(resolve, 'image/jpeg', quality);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+        
+        // 이미지 자동 보정 함수 (흑백, 대비 100%)
+        function processCalligraphyImage(imageData) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // 원본 이미지 그리기
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // 이미지 데이터 가져오기
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // 흑백 변환 및 대비 조정
+                    for (let i = 0; i < data.length; i += 4) {
+                        // 그레이스케일 계산
+                        const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                        
+                        // 대비 100% 적용 (0 또는 255)
+                        const contrast = gray > 128 ? 255 : 0;
+                        
+                        data[i] = contrast;     // R
+                        data[i + 1] = contrast; // G
+                        data[i + 2] = contrast; // B
+                        // data[i + 3]는 alpha 채널이므로 그대로 유지
+                    }
+                    
+                    // 처리된 이미지 데이터 적용
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    // 결과를 Blob으로 변환
+                    canvas.toBlob(resolve, 'image/png');
+                };
+                
+                img.src = imageData;
+            });
+        }
+        
+        // 모달 표시 함수
+        function showModal(title, message, showCancel = false) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalCancel.style.display = showCancel ? 'inline-block' : 'none';
+            customModal.style.display = 'flex';
+        }
+        
+        // 모달 닫기 함수
+        function closeModal() {
+            customModal.style.display = 'none';
+        }
+        
+        // 뒤로가기 함수
+        function goBack() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+                
+                // 2단계에서 1단계로 갈 때 업로드 영역 다시 표시
+                if (currentStep === 1) {
+                    const uploadAreas = document.querySelectorAll('.file-upload-area');
+                    uploadAreas.forEach(area => {
+                        area.style.display = 'block';
+                    });
+                    const previews = document.querySelectorAll('#backgroundPreview, #calligraphyPreview');
+                    previews.forEach(preview => {
+                        preview.style.display = 'none';
+                    });
+                }
+            }
+        }
+        
+        // 단계 표시 함수
+        function showStep(step) {
+            steps.forEach((s, index) => {
+                s.classList.toggle('active', index + 1 === step);
+            });
+            
+            // 모든 단계의 점들 업데이트
+            document.querySelectorAll('.step-indicator').forEach(stepIndicator => {
+                const dots = stepIndicator.querySelectorAll('.step-dot');
+                dots.forEach((dot, index) => {
+                    // 모든 클래스 제거
+                    dot.classList.remove('active', 'completed');
+                    
+                    // 현재 단계만 active (흰색), 나머지는 기본 상태 (흰색 투명도 50%)
+                    if (index + 1 === step) {
+                        dot.classList.add('active');
+                    }
+                });
+            });
+            
+            // 뒤로가기 버튼 표시/숨김
+            document.querySelector('.back-button').style.display = step > 1 ? 'block' : 'none';
+            
+            // 각 단계별 초기화
+            if (step === 3) {
+                // 크롭 영역 초기화
+                setTimeout(() => {
+                    initCropArea();
+                }, 100);
+            } else if (step === 4) {
+                updateCompositePreview();
+            }
+        }
+        
+        // 다음 단계로 이동
+        function nextStep() {
+            if (currentStep < 4) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        }
+        
+        // 이전 단계로 이동
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+        
+        // 새로운 정확한 이미지 크롭 시스템
+        class PreciseCropSystem {
+            constructor() {
+                this.cropArea = { x: 10, y: 10, width: 80, height: 80 };
+                this.isDragging = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
+                this.startPos = { x: 0, y: 0 };
+                this.startCropArea = { x: 0, y: 0, width: 0, height: 0 };
+            }
+
+            // 이미지의 실제 표시 영역 계산 (CSS object-fit: contain 고려)
+            getImageDisplayBounds(imgElement) {
+                const imgRect = imgElement.getBoundingClientRect();
+                
+                // CSS object-fit: contain으로 인한 실제 이미지 영역 계산
+                const imgAspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+                const containerAspectRatio = imgRect.width / imgRect.height;
+                
+                let actualWidth, actualHeight, offsetX, offsetY;
+                
+                if (containerAspectRatio > imgAspectRatio) {
+                    // 컨테이너가 더 넓음 - 이미지가 세로로 맞춰짐
+                    actualHeight = imgRect.height;
+                    actualWidth = imgRect.height * imgAspectRatio;
+                    offsetX = (imgRect.width - actualWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    // 컨테이너가 더 높음 - 이미지가 가로로 맞춰짐
+                    actualWidth = imgRect.width;
+                    actualHeight = imgRect.width / imgAspectRatio;
+                    offsetX = 0;
+                    offsetY = (imgRect.height - actualHeight) / 2;
+                }
+                
+                const bounds = {
+                    x: imgRect.left + offsetX,
+                    y: imgRect.top + offsetY,
+                    width: actualWidth,
+                    height: actualHeight,
+                    offsetX,
+                    offsetY,
+                    // 추가 정보: 원본 이미지 크기와 컨테이너 크기
+                    originalWidth: imgElement.naturalWidth,
+                    originalHeight: imgElement.naturalHeight,
+                    containerWidth: imgRect.width,
+                    containerHeight: imgRect.height,
+                    aspectRatio: imgAspectRatio,
+                    containerAspectRatio: containerAspectRatio
+                };
+                
+                console.log('이미지 표시 영역 (개선됨):', bounds);
+                return bounds;
+            }
+
+            // 픽셀 좌표를 원본 이미지 좌표로 변환
+            pixelToImageCoords(pixelX, pixelY, imgElement, displayBounds) {
+                const scaleX = imgElement.naturalWidth / displayBounds.width;
+                const scaleY = imgElement.naturalHeight / displayBounds.height;
+                
+                const imageX = (pixelX - displayBounds.x) * scaleX;
+                const imageY = (pixelY - displayBounds.y) * scaleY;
+                
+                return { x: imageX, y: imageY };
+            }
+
+            // 원본 이미지 좌표를 픽셀 좌표로 변환
+            imageToPixelCoords(imageX, imageY, imgElement, displayBounds) {
+                const scaleX = displayBounds.width / imgElement.naturalWidth;
+                const scaleY = displayBounds.height / imgElement.naturalHeight;
+                
+                const pixelX = displayBounds.x + imageX * scaleX;
+                const pixelY = displayBounds.y + imageY * scaleY;
+                
+                return { x: pixelX, y: pixelY };
+            }
+
+            // 정확한 이미지 크롭
+            async cropImage(imageData, cropArea) {
+                return new Promise((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    
+                    img.onload = () => {
+                        const displayImg = document.getElementById('processedCalligraphy');
+                        const displayBounds = this.getImageDisplayBounds(displayImg);
+                        
+                        // 크롭 영역을 픽셀 좌표로 변환
+                        const cropX = (cropArea.x / 100) * displayBounds.width;
+                        const cropY = (cropArea.y / 100) * displayBounds.height;
+                        const cropWidth = (cropArea.width / 100) * displayBounds.width;
+                        const cropHeight = (cropArea.height / 100) * displayBounds.height;
+                        
+                        // 원본 이미지 좌표로 변환
+                        const sourceCoords = this.pixelToImageCoords(
+                            displayBounds.x + cropX, 
+                            displayBounds.y + cropY, 
+                            img, 
+                            displayBounds
+                        );
+                        
+                        const sourceEndCoords = this.pixelToImageCoords(
+                            displayBounds.x + cropX + cropWidth, 
+                            displayBounds.y + cropY + cropHeight, 
+                            img, 
+                            displayBounds
+                        );
+                        
+                        const sourceX = Math.max(0, Math.min(img.naturalWidth, sourceCoords.x));
+                        const sourceY = Math.max(0, Math.min(img.naturalHeight, sourceCoords.y));
+                        const sourceWidth = Math.max(1, Math.min(img.naturalWidth - sourceX, sourceEndCoords.x - sourceX));
+                        const sourceHeight = Math.max(1, Math.min(img.naturalHeight - sourceY, sourceEndCoords.y - sourceY));
+                        
+                        // 크롭된 이미지 크기 설정
+                        canvas.width = sourceWidth;
+                        canvas.height = sourceHeight;
+                        
+                        // 이미지 크롭
+                        ctx.drawImage(
+                            img,
+                            sourceX, sourceY, sourceWidth, sourceHeight,
+                            0, 0, sourceWidth, sourceHeight
+                        );
+                        
+                        console.log('정확한 크롭 정보:', {
+                            cropArea,
+                            displayBounds,
+                            sourceCoords: { x: sourceX, y: sourceY, width: sourceWidth, height: sourceHeight },
+                            originalSize: { width: img.naturalWidth, height: img.naturalHeight }
+                        });
+                        
+                        canvas.toBlob(resolve, 'image/png');
+                    };
+                    
+                    img.src = imageData;
+                });
+            }
+
+            // 크롭 핸들 업데이트
+            updateCropHandles() {
+                const img = document.getElementById('processedCalligraphy');
+                const cropAreaEl = document.getElementById('cropArea');
+                if (!img || !cropAreaEl) {
+                    console.log('이미지 또는 크롭 영역 요소를 찾을 수 없음');
+                    return;
+                }
+                
+                const displayBounds = this.getImageDisplayBounds(img);
+                
+                // 크롭 영역을 이미지 컨테이너 기준 상대 좌표로 변환
+                const imgContainer = img.parentElement;
+                const containerRect = imgContainer.getBoundingClientRect();
+                
+                // 이미지 컨테이너 내에서의 상대 위치 계산 (이미지의 실제 표시 영역 기준)
+                const imageOffsetX = displayBounds.x - containerRect.left;
+                const imageOffsetY = displayBounds.y - containerRect.top;
+                
+                const relativeX = imageOffsetX + (this.cropArea.x / 100) * displayBounds.width;
+                const relativeY = imageOffsetY + (this.cropArea.y / 100) * displayBounds.height;
+                const width = (this.cropArea.width / 100) * displayBounds.width;
+                const height = (this.cropArea.height / 100) * displayBounds.height;
+                
+                console.log('크롭 영역 업데이트:', {
+                    cropArea: this.cropArea,
+                    relativeCoords: { x: relativeX, y: relativeY, width, height },
+                    displayBounds,
+                    containerRect,
+                    imageOffset: { x: imageOffsetX, y: imageOffsetY }
+                });
+                
+                // 크롭 영역이 올바른 위치에 있는지 확인
+                console.log('크롭 영역 요소:', cropAreaEl);
+                console.log('크롭 영역 스타일:', {
+                    left: cropAreaEl.style.left,
+                    top: cropAreaEl.style.top,
+                    width: cropAreaEl.style.width,
+                    height: cropAreaEl.style.height
+                });
+                
+                // 크롭 영역 업데이트 (상대 좌표 사용)
+                cropAreaEl.style.left = relativeX + 'px';
+                cropAreaEl.style.top = relativeY + 'px';
+                cropAreaEl.style.width = width + 'px';
+                cropAreaEl.style.height = height + 'px';
+                
+                // 핸들 위치 업데이트
+                this.updateHandles(cropAreaEl);
+            }
+
+            // 핸들 위치 업데이트 (크롭 사각형에 정확히 붙이기)
+            updateHandles(cropAreaEl) {
+                // 기존 핸들 제거
+                const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
+                existingHandles.forEach(handle => handle.remove());
+                
+                // 8개 핸들 동적 생성
+                const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
+                directions.forEach(direction => {
+                    const handle = document.createElement('div');
+                    handle.className = `crop-handle ${direction}`;
+                    handle.dataset.direction = direction;
+                    cropAreaEl.appendChild(handle);
+                });
+                
+                // 핸들 위치 설정
+                const handles = cropAreaEl.querySelectorAll('.crop-handle');
+                handles.forEach(handle => {
+                    const direction = handle.dataset.direction;
+                    
+                    // 모든 핸들의 기본 스타일 초기화
+                    handle.style.left = 'auto';
+                    handle.style.right = 'auto';
+                    handle.style.top = 'auto';
+                    handle.style.bottom = 'auto';
+                    handle.style.transform = 'none';
+                    
+                    switch(direction) {
+                        case 'nw':
+                            handle.style.left = '-10px';
+                            handle.style.top = '-10px';
+                            break;
+                        case 'ne':
+                            handle.style.right = '-10px';
+                            handle.style.top = '-10px';
+                            break;
+                        case 'sw':
+                            handle.style.left = '-10px';
+                            handle.style.bottom = '-10px';
+                            break;
+                        case 'se':
+                            handle.style.right = '-10px';
+                            handle.style.bottom = '-10px';
+                            break;
+                        case 'n':
+                            handle.style.left = '50%';
+                            handle.style.top = '-10px';
+                            handle.style.transform = 'translateX(-50%)';
+                            break;
+                        case 's':
+                            handle.style.left = '50%';
+                            handle.style.bottom = '-10px';
+                            handle.style.transform = 'translateX(-50%)';
+                            break;
+                        case 'w':
+                            handle.style.left = '-10px';
+                            handle.style.top = '50%';
+                            handle.style.transform = 'translateY(-50%)';
+                            break;
+                        case 'e':
+                            handle.style.right = '-10px';
+                            handle.style.top = '50%';
+                            handle.style.transform = 'translateY(-50%)';
+                            break;
+                    }
+                });
+                
+                // 핸들 이벤트 설정
+                this.setupHandleEvents(handles);
+            }
+            
+            // 핸들 이벤트 설정
+            setupHandleEvents(handles) {
+                const img = document.getElementById('processedCalligraphy');
+                
+                handles.forEach(handle => {
+                    handle.addEventListener('mousedown', (e) => {
+                        console.log('크롭 핸들 드래그 시작:', handle.dataset.direction);
+                        this.isResizing = true;
+                        this.resizeHandle = handle.dataset.direction;
+                        this.startPos = { x: e.clientX, y: e.clientY };
+                        this.startCropArea = { ...this.cropArea };
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                });
+            }
+        }
+
+        // 전역 크롭 시스템 인스턴스
+        const cropSystem = new PreciseCropSystem();
+        
+        // 합성 미리보기 업데이트
+        function updateCompositePreview() {
+            if (!backgroundImage) return;
+            
+            const compositeBackground = document.getElementById('compositeBackground');
+            const compositeCalligraphy = document.getElementById('compositeCalligraphy');
+            
+            if (compositeBackground) {
+                compositeBackground.src = backgroundImage;
+                
+                // 배경 이미지 로드 후 비율에 따라 조정
+                compositeBackground.onload = () => {
+                    adjustBackgroundImageSize(compositeBackground);
+                };
+            }
+            
+            if (compositeCalligraphy) {
+                // 크롭된 이미지가 있으면 사용, 없으면 원본 이미지 사용
+                if (croppedCalligraphy) {
+                    console.log('크롭된 이미지 사용:', croppedCalligraphy);
+                    compositeCalligraphy.src = croppedCalligraphy;
+                } else if (calligraphyImage) {
+                    console.log('원본 이미지 사용:', calligraphyImage);
+                    compositeCalligraphy.src = calligraphyImage;
+                }
+                
+                compositeCalligraphy.onload = () => {
+                    setTimeout(() => {
+                        updateEditHandles();
+                    }, 100);
+                };
+            }
+            
+            compositeSystem.updatePreview();
+        }
+        
+        // 배경 이미지 크기 자동 조정 함수 (크롭과 합성에서 동일한 방식 적용)
+        function adjustBackgroundImageSize(imgElement) {
+            const container = imgElement.parentElement;
+            const containerRect = container.getBoundingClientRect();
+            
+            // 컨테이너의 가로세로 비율
+            const containerAspectRatio = containerRect.width / containerRect.height;
+            // 이미지의 가로세로 비율
+            const imageAspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+            
+            console.log('비율 비교:', {
+                container: containerAspectRatio,
+                image: imageAspectRatio,
+                containerSize: { width: containerRect.width, height: containerRect.height },
+                imageSize: { width: imgElement.naturalWidth, height: imgElement.naturalHeight }
+            });
+            
+            // 모든 경우에 object-fit: contain을 사용하여 일관성 보장
+            imgElement.style.width = '100%';
+            imgElement.style.height = '100%';
+            imgElement.style.maxWidth = '100%';
+            imgElement.style.maxHeight = '100%';
+            imgElement.style.objectFit = 'contain';
+            imgElement.style.objectPosition = 'center';
+            
+            console.log('일관된 이미지 표시 방식 적용 - object-fit: contain');
+        }
+        
+        // 글씨 이미지의 실제 자른 모양 감지하여 라인 생성 (calligraphyOverlay 기준)
+        function createCropOutline() {
+            // 기존 크롭 아웃라인 제거
+            const existingOutline = document.querySelector('.crop-outline');
+            if (existingOutline) {
+                existingOutline.remove();
+            }
+            
+            // calligraphyOverlay와 동일한 크기로 아웃라인 생성
+            const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+            if (!calligraphyOverlay) return;
+            
+            const outline = document.createElement('div');
+            outline.className = 'crop-outline';
+            
+            // calligraphyOverlay의 위치와 크기를 그대로 사용
+            const overlayRect = calligraphyOverlay.getBoundingClientRect();
+            const previewRect = document.getElementById('compositePreview').getBoundingClientRect();
+            
+            const relativeLeft = overlayRect.left - previewRect.left;
+            const relativeTop = overlayRect.top - previewRect.top;
+            
+            outline.style.left = relativeLeft + 'px';
+            outline.style.top = relativeTop + 'px';
+            outline.style.width = overlayRect.width + 'px';
+            outline.style.height = overlayRect.height + 'px';
+            
+            // calligraphyOverlay와 동일한 transform 적용
+            const overlayTransform = calligraphyOverlay.style.transform;
+            if (overlayTransform) {
+                outline.style.transform = overlayTransform;
+            }
+            
+            // composite-preview에 추가
+            document.getElementById('compositePreview').appendChild(outline);
+            
+            console.log('크롭 아웃라인 생성 (calligraphyOverlay 기준):', {
+                left: relativeLeft,
+                top: relativeTop,
+                width: overlayRect.width,
+                height: overlayRect.height,
+                transform: overlayTransform
+            });
+        }
+        
+        // 크롭된 이미지의 실제 내용 영역 감지
+        function detectContentBounds(imageSrc) {
+            return new Promise((resolve) => {
+                if (!imageSrc) {
+                    resolve({ x: 0, y: 0, width: 100, height: 100 });
+                    return;
+                }
+                
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                    let hasContent = false;
+                    
+                    // 픽셀을 스캔하여 실제 내용이 있는 영역 찾기
+                    for (let y = 0; y < canvas.height; y++) {
+                        for (let x = 0; x < canvas.width; x++) {
+                            const index = (y * canvas.width + x) * 4;
+                            const alpha = data[index + 3];
+                            
+                            if (alpha > 0) { // 투명하지 않은 픽셀
+                                hasContent = true;
+                                minX = Math.min(minX, x);
+                                minY = Math.min(minY, y);
+                                maxX = Math.max(maxX, x);
+                                maxY = Math.max(maxY, y);
+                            }
+                        }
+                    }
+                    
+                    if (hasContent) {
+                        // 퍼센트로 변환
+                        const bounds = {
+                            x: (minX / canvas.width) * 100,
+                            y: (minY / canvas.height) * 100,
+                            width: ((maxX - minX) / canvas.width) * 100,
+                            height: ((maxY - minY) / canvas.height) * 100
+                        };
+                        resolve(bounds);
+                    } else {
+                        resolve({ x: 0, y: 0, width: 100, height: 100 });
+                    }
+                };
+                img.src = imageSrc;
+            });
+        }
+
+        // 편집 핸들 위치 업데이트 (compositePreview 내부에 위치)
+        function updateEditHandles() {
+            const editHandles = document.getElementById('editHandles');
+            const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+            if (!editHandles || !calligraphyOverlay) return;
+            
+            console.log('편집 핸들 업데이트 시작 - compositePreview 내부');
+            
+            // calligraphyOverlay와 동일한 CSS 속성 적용
+            editHandles.style.left = calligraphyOverlay.style.left;
+            editHandles.style.top = calligraphyOverlay.style.top;
+            editHandles.style.width = calligraphyOverlay.style.width;
+            editHandles.style.height = calligraphyOverlay.style.height;
+            editHandles.style.transform = calligraphyOverlay.style.transform;
+            editHandles.style.display = 'block';
+            
+            // 크롭된 이미지의 실제 내용 영역에 맞춰 편집 핸들 크기 조정
+            if (croppedCalligraphy) {
+                detectContentBounds(croppedCalligraphy).then((bounds) => {
+                    console.log('크롭된 이미지 내용 영역:', bounds);
+                    
+                    // 편집 핸들의 크기를 실제 내용 영역에 맞춰 조정
+                    const contentX = (bounds.x / 100) * 100; // calligraphyOverlay의 100% 기준
+                    const contentY = (bounds.y / 100) * 100;
+                    const contentWidth = (bounds.width / 100) * 100;
+                    const contentHeight = (bounds.height / 100) * 100;
+                    
+                    // 편집 핸들 컨테이너 크기 조정
+                    editHandles.style.left = `calc(${calligraphyOverlay.style.left} + ${contentX}%)`;
+                    editHandles.style.top = `calc(${calligraphyOverlay.style.top} + ${contentY}%)`;
+                    editHandles.style.width = `${contentWidth}%`;
+                    editHandles.style.height = `${contentHeight}%`;
+                });
+            }
+            
+            // 핸들 위치 조정 (고정 크기 유지)
+            const scaleHandle = document.getElementById('scaleHandle');
+            const rotateHandle = document.getElementById('rotateHandle');
+            
+            if (scaleHandle) {
+                scaleHandle.style.right = '-20px';
+                scaleHandle.style.bottom = '-20px';
+                scaleHandle.style.width = '40px !important';
+                scaleHandle.style.height = '40px !important';
+                scaleHandle.style.minWidth = '40px !important';
+                scaleHandle.style.minHeight = '40px !important';
+                scaleHandle.style.maxWidth = '40px !important';
+                scaleHandle.style.maxHeight = '40px !important';
+                scaleHandle.style.transform = 'none !important';
+            }
+            
+            if (rotateHandle) {
+                rotateHandle.style.right = '-20px';
+                rotateHandle.style.top = '-20px';
+                rotateHandle.style.width = '40px !important';
+                rotateHandle.style.height = '40px !important';
+                rotateHandle.style.minWidth = '40px !important';
+                rotateHandle.style.minHeight = '40px !important';
+                rotateHandle.style.maxWidth = '40px !important';
+                rotateHandle.style.maxHeight = '40px !important';
+                rotateHandle.style.transform = 'none !important';
+            }
+            
+            console.log('편집 핸들 업데이트 완료 - compositePreview 내부에 위치');
+        }
+        
+        
+        // 새로운 정확한 합성 시스템
+        class PreciseCompositeSystem {
+            constructor() {
+                this.position = { x: 50, y: 50 }; // 퍼센트 단위
+                this.scale = 0.3; // 배경의 30% 크기로 시작 (더 작게)
+                this.rotation = 0;
+                this.blendMode = 'multiply';
+                this.bounds = { x: 0, y: 0, width: 100, height: 100 }; // 글씨의 실제 경계
+                this.backgroundDisplayBounds = null; // 배경 이미지의 실제 표시 영역
+            }
+
+            // 배경 이미지의 실제 표시 영역 계산 (크롭 시스템과 동일한 방식)
+            getBackgroundDisplayBounds(imgElement) {
+                const imgRect = imgElement.getBoundingClientRect();
+                
+                // CSS object-fit: contain으로 인한 실제 이미지 영역 계산
+                const imgAspectRatio = imgElement.naturalWidth / imgElement.naturalHeight;
+                const containerAspectRatio = imgRect.width / imgRect.height;
+                
+                let actualWidth, actualHeight, offsetX, offsetY;
+                
+                if (containerAspectRatio > imgAspectRatio) {
+                    // 컨테이너가 더 넓음 - 이미지가 세로로 맞춰짐
+                    actualHeight = imgRect.height;
+                    actualWidth = imgRect.height * imgAspectRatio;
+                    offsetX = (imgRect.width - actualWidth) / 2;
+                    offsetY = 0;
+                } else {
+                    // 컨테이너가 더 높음 - 이미지가 가로로 맞춰짐
+                    actualWidth = imgRect.width;
+                    actualHeight = imgRect.width / imgAspectRatio;
+                    offsetX = 0;
+                    offsetY = (imgRect.height - actualHeight) / 2;
+                }
+                
+                const bounds = {
+                    x: imgRect.left + offsetX,
+                    y: imgRect.top + offsetY,
+                    width: actualWidth,
+                    height: actualHeight,
+                    offsetX,
+                    offsetY,
+                    originalWidth: imgElement.naturalWidth,
+                    originalHeight: imgElement.naturalHeight,
+                    containerWidth: imgRect.width,
+                    containerHeight: imgRect.height,
+                    aspectRatio: imgAspectRatio,
+                    containerAspectRatio: containerAspectRatio
+                };
+                
+                console.log('배경 이미지 표시 영역:', bounds);
+                return bounds;
+            }
+
+            // 잘라진 이미지의 실제 경계 감지
+            detectImageBounds() {
+                return new Promise((resolve) => {
+                    if (!croppedCalligraphy) {
+                        this.bounds = { x: 0, y: 0, width: 100, height: 100 };
+                        resolve(this.bounds);
+                        return;
+                    }
+                    
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        
+                        ctx.drawImage(img, 0, 0);
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const data = imageData.data;
+                        
+                        let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                        let hasContent = false;
+                        
+                        // 픽셀을 스캔하여 실제 내용이 있는 영역 찾기
+                        for (let y = 0; y < canvas.height; y++) {
+                            for (let x = 0; x < canvas.width; x++) {
+                                const index = (y * canvas.width + x) * 4;
+                                const alpha = data[index + 3];
+                                
+                                if (alpha > 0) { // 투명하지 않은 픽셀
+                                    hasContent = true;
+                                    minX = Math.min(minX, x);
+                                    minY = Math.min(minY, y);
+                                    maxX = Math.max(maxX, x);
+                                    maxY = Math.max(maxY, y);
+                                }
+                            }
+                        }
+                        
+                        if (hasContent) {
+                            // 퍼센트로 변환
+                            this.bounds = {
+                                x: (minX / canvas.width) * 100,
+                                y: (minY / canvas.height) * 100,
+                                width: ((maxX - minX) / canvas.width) * 100,
+                                height: ((maxY - minY) / canvas.height) * 100
+                            };
+                        } else {
+                            this.bounds = { x: 0, y: 0, width: 100, height: 100 };
+                        }
+                        
+                        console.log('잘라진 이미지 경계 감지:', this.bounds);
+                        resolve(this.bounds);
+                    };
+                    img.src = croppedCalligraphy;
+                });
+            }
+
+            // 배경 이미지의 실제 표시 영역에 맞춰 글씨 이미지 크기 조정
+            adjustCalligraphyToBackground() {
+                if (!this.backgroundDisplayBounds || !croppedCalligraphy) return;
+                
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                if (!calligraphyOverlay) return;
+                
+                // 배경 이미지의 실제 표시 영역 비율 계산
+                const backgroundRatio = this.backgroundDisplayBounds.width / this.backgroundDisplayBounds.height;
+                
+                // 크롭된 이미지의 비율 계산
+                const img = new Image();
+                img.onload = () => {
+                    const calligraphyRatio = img.naturalWidth / img.naturalHeight;
+                    
+                    console.log('비율 비교:', {
+                        background: backgroundRatio,
+                        calligraphy: calligraphyRatio,
+                        backgroundBounds: this.backgroundDisplayBounds
+                    });
+                    
+                    // 배경 이미지의 실제 표시 영역에 맞춰 글씨 오버레이 크기 조정
+                    if (backgroundRatio > calligraphyRatio) {
+                        // 배경이 더 넓음 - 글씨를 세로로 맞춤
+                        calligraphyOverlay.style.width = 'auto';
+                        calligraphyOverlay.style.height = '100%';
+                        calligraphyOverlay.style.maxWidth = '100%';
+                        calligraphyOverlay.style.maxHeight = '100%';
+                    } else {
+                        // 배경이 더 높음 - 글씨를 가로로 맞춤
+                        calligraphyOverlay.style.width = '100%';
+                        calligraphyOverlay.style.height = 'auto';
+                        calligraphyOverlay.style.maxWidth = '100%';
+                        calligraphyOverlay.style.maxHeight = '100%';
+                    }
+                    
+                    calligraphyOverlay.style.objectFit = 'contain';
+                    calligraphyOverlay.style.objectPosition = 'center';
+                    
+                    console.log('글씨 이미지 크기 조정 완료');
+                };
+                img.src = croppedCalligraphy;
+            }
+
+            // 미리보기 업데이트 (CSS Transform 사용)
+            updatePreview() {
+                if (!backgroundImage) return;
+                
+                const compositeBackground = document.getElementById('compositeBackground');
+                const compositeCalligraphy = document.getElementById('compositeCalligraphy');
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                const editHandles = document.getElementById('editHandles');
+                
+                if (!compositeBackground || !compositeCalligraphy || !calligraphyOverlay) return;
+                
+                compositeBackground.src = backgroundImage;
+                
+                // 배경 이미지 로드 후 비율에 따라 조정
+                compositeBackground.onload = () => {
+                    adjustBackgroundImageSize(compositeBackground);
+                    // 배경 이미지의 실제 표시 영역 계산 및 저장
+                    this.backgroundDisplayBounds = this.getBackgroundDisplayBounds(compositeBackground);
+                };
+                
+                // 크롭된 이미지가 있으면 사용, 없으면 원본 이미지 사용
+                if (croppedCalligraphy) {
+                    console.log('compositeSystem에서 크롭된 이미지 사용:', croppedCalligraphy);
+                    compositeCalligraphy.src = croppedCalligraphy;
+                } else if (calligraphyImage) {
+                    console.log('compositeSystem에서 원본 이미지 사용:', calligraphyImage);
+                    compositeCalligraphy.src = calligraphyImage;
+                } else {
+                    return;
+                }
+                
+                // 잘라진 이미지 경계 감지
+                this.detectImageBounds().then(() => {
+                    // 배경 이미지의 실제 표시 영역에 맞춰 글씨 이미지 크기 조정
+                    this.adjustCalligraphyToBackground();
+                    this.updateEditHandles();
+                });
+                
+                // 위치, 크기, 회전 적용
+                const transform = `translate(-50%, -50%) scale(${this.scale}) rotate(${this.rotation}deg)`;
+                calligraphyOverlay.style.left = `${this.position.x}%`;
+                calligraphyOverlay.style.top = `${this.position.y}%`;
+                calligraphyOverlay.style.transform = transform;
+                
+                // 편집 핸들을 calligraphyOverlay와 정확히 동일한 위치와 크기로 설정
+                if (editHandles) {
+                    // calligraphyOverlay와 동일한 CSS 속성 적용
+                    editHandles.style.left = calligraphyOverlay.style.left;
+                    editHandles.style.top = calligraphyOverlay.style.top;
+                    editHandles.style.width = calligraphyOverlay.style.width;
+                    editHandles.style.height = calligraphyOverlay.style.height;
+                    editHandles.style.transform = calligraphyOverlay.style.transform;
+                }
+                
+                console.log('미리보기 업데이트:', {
+                    position: this.position,
+                    scale: this.scale,
+                    rotation: this.rotation,
+                    blendMode: this.blendMode,
+                    bounds: this.bounds,
+                    transform: transform
+                });
+                
+                // 블렌드 모드 적용
+                if (this.blendMode === 'screen') {
+                    calligraphyOverlay.style.filter = 'invert(1)';
+                    calligraphyOverlay.style.mixBlendMode = 'screen';
+                } else {
+                    calligraphyOverlay.style.filter = 'none';
+                    calligraphyOverlay.style.mixBlendMode = 'multiply';
+                }
+            }
+            
+            // 편집 핸들 위치 업데이트 (compositePreview 내부에 위치)
+            updateEditHandles() {
+                const editHandles = document.getElementById('editHandles');
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                if (!editHandles || !calligraphyOverlay) return;
+                
+                console.log('compositeSystem 편집 핸들 업데이트 시작 - compositePreview 내부');
+                
+                // calligraphyOverlay와 동일한 CSS 속성 적용
+                editHandles.style.left = calligraphyOverlay.style.left;
+                editHandles.style.top = calligraphyOverlay.style.top;
+                editHandles.style.width = calligraphyOverlay.style.width;
+                editHandles.style.height = calligraphyOverlay.style.height;
+                editHandles.style.transform = calligraphyOverlay.style.transform;
+                editHandles.style.display = 'block';
+                
+                // 크롭된 이미지의 실제 내용 영역에 맞춰 편집 핸들 크기 조정
+                if (croppedCalligraphy) {
+                    detectContentBounds(croppedCalligraphy).then((bounds) => {
+                        console.log('compositeSystem 크롭된 이미지 내용 영역:', bounds);
+                        
+                        // 편집 핸들의 크기를 실제 내용 영역에 맞춰 조정
+                        const contentX = (bounds.x / 100) * 100; // calligraphyOverlay의 100% 기준
+                        const contentY = (bounds.y / 100) * 100;
+                        const contentWidth = (bounds.width / 100) * 100;
+                        const contentHeight = (bounds.height / 100) * 100;
+                        
+                        // 편집 핸들 컨테이너 크기 조정
+                        editHandles.style.left = `calc(${calligraphyOverlay.style.left} + ${contentX}%)`;
+                        editHandles.style.top = `calc(${calligraphyOverlay.style.top} + ${contentY}%)`;
+                        editHandles.style.width = `${contentWidth}%`;
+                        editHandles.style.height = `${contentHeight}%`;
+                    });
+                }
+                
+                // 핸들 크기 고정
+                const scaleHandle = document.getElementById('scaleHandle');
+                const rotateHandle = document.getElementById('rotateHandle');
+                
+                if (scaleHandle) {
+                    scaleHandle.style.width = '40px !important';
+                    scaleHandle.style.height = '40px !important';
+                    scaleHandle.style.minWidth = '40px !important';
+                    scaleHandle.style.minHeight = '40px !important';
+                    scaleHandle.style.maxWidth = '40px !important';
+                    scaleHandle.style.maxHeight = '40px !important';
+                    scaleHandle.style.transform = 'none !important';
+                }
+                
+                if (rotateHandle) {
+                    rotateHandle.style.width = '40px !important';
+                    rotateHandle.style.height = '40px !important';
+                    rotateHandle.style.minWidth = '40px !important';
+                    rotateHandle.style.minHeight = '40px !important';
+                    rotateHandle.style.maxWidth = '40px !important';
+                    rotateHandle.style.maxHeight = '40px !important';
+                    rotateHandle.style.transform = 'none !important';
+                }
+                
+                console.log('compositeSystem 편집 핸들 업데이트 완료 - compositePreview 내부에 위치');
+            }
+
+            // 정확한 다운로드 이미지 생성 (원본 배경 이미지 크기에 맞춤)
+            async downloadImage() {
+                return new Promise((resolve) => {
+                    // 미리보기 영역의 정확한 크기와 위치 가져오기
+                    const previewElement = document.getElementById('compositePreview');
+                    const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                    const compositeBackground = document.getElementById('compositeBackground');
+                    
+                    if (!previewElement || !calligraphyOverlay || !compositeBackground) {
+                        console.error('미리보기 요소를 찾을 수 없습니다.');
+                        resolve();
+                        return;
+                    }
+                    
+                    const previewRect = previewElement.getBoundingClientRect();
+                    const overlayRect = calligraphyOverlay.getBoundingClientRect();
+                    
+                    // 배경 이미지의 실제 표시 영역 계산
+                    const backgroundBounds = this.getBackgroundDisplayBounds(compositeBackground);
+                    
+                    // 원본 배경 이미지 크기로 캔버스 생성
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 배경 이미지 그리기
+                    const bgImg = new Image();
+                    bgImg.onload = () => {
+                        // 원본 배경 이미지 크기로 캔버스 설정
+                        canvas.width = bgImg.naturalWidth;
+                        canvas.height = bgImg.naturalHeight;
+                        
+                        // 원본 배경 이미지 그리기 (전체 크기)
+                        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                        
+                        console.log('다운로드 캔버스 크기 (원본 배경 이미지):', {
+                            width: canvas.width,
+                            height: canvas.height,
+                            originalSize: { width: bgImg.naturalWidth, height: bgImg.naturalHeight }
+                        });
+                        
+                        // 글씨 오버레이 그리기
+                        const calligraphyImg = new Image();
+                        calligraphyImg.onload = () => {
+                            ctx.save();
+                            
+                            // 미리보기에서의 글씨 위치와 크기를 원본 배경 이미지 크기로 변환
+                            const scaleX = canvas.width / backgroundBounds.width;
+                            const scaleY = canvas.height / backgroundBounds.height;
+                            
+                            // 미리보기에서의 글씨 중심점을 원본 배경 이미지 좌표로 변환
+                            const previewCenterX = overlayRect.left - previewRect.left + overlayRect.width / 2;
+                            const previewCenterY = overlayRect.top - previewRect.top + overlayRect.height / 2;
+                            
+                            // 배경 이미지의 실제 표시 영역 내에서의 상대 위치 계산
+                            const relativeX = (previewCenterX - backgroundBounds.offsetX) / backgroundBounds.width;
+                            const relativeY = (previewCenterY - backgroundBounds.offsetY) / backgroundBounds.height;
+                            
+                            // 원본 배경 이미지에서의 실제 위치
+                            const centerX = relativeX * canvas.width;
+                            const centerY = relativeY * canvas.height;
+                            
+                            // 글씨 크기를 원본 배경 이미지에 맞게 조정
+                            const calligraphyWidth = overlayRect.width * scaleX;
+                            const calligraphyHeight = overlayRect.height * scaleY;
+                            
+                            console.log('다운로드 이미지 생성 (원본 배경 크기):', {
+                                canvasSize: { width: canvas.width, height: canvas.height },
+                                backgroundBounds: backgroundBounds,
+                                scaleFactors: { scaleX, scaleY },
+                                previewCenter: { x: previewCenterX, y: previewCenterY },
+                                relativePosition: { x: relativeX, y: relativeY },
+                                finalCenter: { x: centerX, y: centerY },
+                                calligraphySize: { width: calligraphyWidth, height: calligraphyHeight },
+                                rotation: this.rotation,
+                                blendMode: this.blendMode
+                            });
+                            
+                            // 회전 중심점으로 이동
+                            ctx.translate(centerX, centerY);
+                            ctx.rotate((this.rotation * Math.PI) / 180);
+                            
+                            // 블렌드 모드 설정 (미리보기와 동일)
+                            if (this.blendMode === 'screen') {
+                                ctx.globalCompositeOperation = 'screen';
+                                ctx.filter = 'invert(1)';
+                            } else {
+                                ctx.globalCompositeOperation = 'multiply';
+                                ctx.filter = 'none';
+                            }
+                            
+                            // 원본 배경 이미지 크기에 맞춰 글씨 그리기 (중심점 기준)
+                            ctx.drawImage(calligraphyImg, -calligraphyWidth / 2, -calligraphyHeight / 2, calligraphyWidth, calligraphyHeight);
+                            ctx.restore();
+                            
+                            // 다운로드
+                            const link = document.createElement('a');
+                            link.download = 'calligraphy-composite.jpg';
+                            link.href = canvas.toDataURL('image/jpeg', 0.9);
+                            link.click();
+                            
+                            resolve();
+                        };
+                        calligraphyImg.src = croppedCalligraphy;
+                    };
+                    bgImg.src = backgroundImage;
+                });
+            }
+
+            // 위치 업데이트
+            updatePosition(x, y) {
+                this.position.x = Math.max(0, Math.min(100, x));
+                this.position.y = Math.max(0, Math.min(100, y));
+                this.updatePreview();
+            }
+
+            // 크기 업데이트
+            updateScale(scale) {
+                this.scale = Math.max(0.1, Math.min(5, scale));
+                this.updatePreview();
+                this.updateEditHandles();
+            }
+
+            // 회전 업데이트
+            updateRotation(rotation) {
+                this.rotation = rotation;
+                this.updatePreview();
+                this.updateEditHandles();
+            }
+
+            // 블렌드 모드 업데이트
+            updateBlendMode(mode) {
+                this.blendMode = mode;
+                this.updatePreview();
+            }
+        }
+
+        // 전역 합성 시스템 인스턴스
+        const compositeSystem = new PreciseCompositeSystem();
+
+        // 최종 이미지 다운로드 (새로운 시스템 사용)
+        function downloadFinalImage() {
+            compositeSystem.downloadImage();
+        }
+        
+        // 이벤트 리스너
+        backgroundInput.addEventListener('change', async (e) => {
+            console.log('배경 이미지 업로드 시작');
+            const file = e.target.files[0];
+            if (file) {
+                console.log('파일 선택됨:', file.name);
+                try {
+                    const compressed = await compressImage(file);
+                    backgroundImage = URL.createObjectURL(compressed);
+                    backgroundImageEl.src = backgroundImage;
+                    
+                    // 점선 영역을 사진으로 교체
+                    const uploadArea = document.querySelector('.file-upload-area');
+                    uploadArea.style.display = 'none';
+                    backgroundPreview.style.display = 'block';
+                    
+                    // 다음 단계 버튼 표시
+                    document.getElementById('nextButtonContainer').style.display = 'block';
+                    
+                    console.log('배경 이미지 업로드 완료');
+                } catch (error) {
+                    console.error('배경 이미지 처리 오류:', error);
+                }
+            }
+        });
+        
+        calligraphyInput.addEventListener('change', async (e) => {
+            console.log('글씨 이미지 업로드 시작');
+            const file = e.target.files[0];
+            if (file) {
+                console.log('글씨 파일 선택됨:', file.name);
+                
+                try {
+                    const compressed = await compressImage(file);
+                    calligraphyImage = URL.createObjectURL(compressed);
+                    
+                    // 점선 영역을 사진으로 교체
+                    const uploadArea = calligraphyInput.closest('.file-upload-area');
+                    if (uploadArea) {
+                    uploadArea.style.display = 'none';
+                    }
+                    
+                    console.log('글씨 이미지 업로드 완료, 자동으로 다음 단계로 이동');
+                    // 자동으로 다음 단계로 이동
+                    setTimeout(async () => {
+                        // 글씨 이미지 자동 보정 처리
+                        if (calligraphyImage) {
+                            try {
+                    const processed = await processCalligraphyImage(calligraphyImage);
+                    processedCalligraphy = URL.createObjectURL(processed);
+                    processedCalligraphyEl.src = processedCalligraphy;
+                    
+                    // 새로운 크롭 시스템 초기화
+                    setTimeout(() => {
+                        initCropArea();
+                        setupCropEvents();
+                    }, 100);
+                            } catch (error) {
+                                console.error('글씨 이미지 처리 오류:', error);
+                            }
+                        }
+                        nextStep();
+                    }, 500); // 0.5초 후 자동 이동
+                } catch (error) {
+                    console.error('글씨 이미지 처리 오류:', error);
+                }
+            }
+        });
+        
+        
+        // 크롭 핸들 드래그 이벤트
+        let isResizing = false;
+        let isMoving = false;
+        let resizeDirection = '';
+        let startMousePos = { x: 0, y: 0 };
+        let startCropArea = { x: 0, y: 0, width: 100, height: 100 };
+        
+        // 크롭 영역 초기화 (새로운 시스템 사용)
+        function initCropArea() {
+            cropSystem.cropArea = { x: 10, y: 10, width: 80, height: 80 };
+            
+            // 이미지가 로드된 후 크롭 핸들 업데이트
+            setTimeout(() => {
+                const cropAreaEl = document.getElementById('cropArea');
+                if (cropAreaEl) {
+                    cropSystem.updateCropHandles(cropAreaEl);
+                }
+            }, 100);
+        }
+        
+        // 크롭 핸들 업데이트 (새로운 시스템 사용)
+        function updateCropHandles() {
+            const cropAreaEl = document.getElementById('cropArea');
+            if (cropAreaEl) {
+                cropSystem.updateCropHandles(cropAreaEl);
+            }
+        }
+        
+        // 새로운 정확한 크롭 이벤트 시스템
+        function setupCropEvents() {
+            const img = document.getElementById('processedCalligraphy');
+            const cropAreaEl = document.getElementById('cropArea');
+            
+            if (!img || !cropAreaEl) {
+                console.log('크롭 이벤트 설정 실패: 이미지 또는 크롭 영역 요소를 찾을 수 없음');
+                return;
+            }
+            
+            console.log('크롭 이벤트 설정 완료');
+            
+            // 크롭 핸들 이벤트는 updateHandles에서 설정됨
+            
+            // 크롭 영역 드래그 이벤트
+            cropAreaEl.addEventListener('mousedown', (e) => {
+                console.log('크롭 영역 드래그 시작');
+                cropSystem.isDragging = true;
+                cropSystem.startPos = { x: e.clientX, y: e.clientY };
+                cropSystem.startCropArea = { ...cropSystem.cropArea };
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            // 마우스 이동 이벤트
+            document.addEventListener('mousemove', (e) => {
+                if (cropSystem.isResizing) {
+                    const displayBounds = cropSystem.getImageDisplayBounds(img);
+                    const deltaX = ((e.clientX - cropSystem.startPos.x) / displayBounds.width) * 100;
+                    const deltaY = ((e.clientY - cropSystem.startPos.y) / displayBounds.height) * 100;
+                    
+                    console.log('크롭 리사이징:', {
+                        direction: cropSystem.resizeHandle,
+                        deltaX, deltaY,
+                        startPos: cropSystem.startPos,
+                        currentPos: { x: e.clientX, y: e.clientY }
+                    });
+                    
+                    let newCropArea = { ...cropSystem.startCropArea };
+                    
+                    // 리사이징 방향에 따른 처리
+                    switch(cropSystem.resizeHandle) {
+                        case 'nw': // 왼쪽 위
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 'ne': // 오른쪽 위
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 'sw': // 왼쪽 아래
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'se': // 오른쪽 아래
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'n': // 위
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 's': // 아래
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'w': // 왼쪽
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            break;
+                        case 'e': // 오른쪽
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            break;
+                    }
+                    
+                    // 경계 체크
+                    if (newCropArea.x + newCropArea.width > 100) {
+                        newCropArea.width = 100 - newCropArea.x;
+                    }
+                    if (newCropArea.y + newCropArea.height > 100) {
+                        newCropArea.height = 100 - newCropArea.y;
+                    }
+                    
+                    cropSystem.cropArea = newCropArea;
+                    cropSystem.updateCropHandles();
+                } else if (cropSystem.isDragging) {
+                    const displayBounds = cropSystem.getImageDisplayBounds(img);
+                    const deltaX = ((e.clientX - cropSystem.startPos.x) / displayBounds.width) * 100;
+                    const deltaY = ((e.clientY - cropSystem.startPos.y) / displayBounds.height) * 100;
+                    
+                    let newCropArea = { ...cropSystem.startCropArea };
+                    newCropArea.x = Math.max(0, Math.min(100 - newCropArea.width, cropSystem.startCropArea.x + deltaX));
+                    newCropArea.y = Math.max(0, Math.min(100 - newCropArea.height, cropSystem.startCropArea.y + deltaY));
+                    
+                    cropSystem.cropArea = newCropArea;
+                    cropSystem.updateCropHandles();
+                }
+            });
+            
+            // 마우스 업 이벤트
+            document.addEventListener('mouseup', () => {
+                cropSystem.isResizing = false;
+                cropSystem.isDragging = false;
+            });
+        }
+        
+        // 편집 핸들 변수
+        let isEditing = false;
+        let editType = '';
+        let editStart = { x: 0, y: 0, scale: 1, rotation: 0 };
+        
+        // 새로운 합성 미리보기 드래그 이벤트
+        calligraphyOverlay.addEventListener('mousedown', (e) => {
+            // 편집 핸들이 아닌 경우에만 위치 이동
+            if (!e.target.classList.contains('edit-handle')) {
+                isDragging = true;
+                const rect = compositePreview.getBoundingClientRect();
+                dragStart = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+                e.preventDefault();
+            }
+        });
+        
+        // 크기 조정 핸들
+        document.getElementById('scaleHandle').addEventListener('mousedown', (e) => {
+            isEditing = true;
+            editType = 'scale';
+            editStart = {
+                x: e.clientX,
+                y: e.clientY,
+                scale: compositeSystem.scale,
+                rotation: compositeSystem.rotation
+            };
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        // 회전 핸들
+        document.getElementById('rotateHandle').addEventListener('mousedown', (e) => {
+            isEditing = true;
+            editType = 'rotate';
+            editStart = {
+                x: e.clientX,
+                y: e.clientY,
+                scale: compositeSystem.scale,
+                rotation: compositeSystem.rotation
+            };
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const rect = compositePreview.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100)));
+                const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100)));
+                
+                compositeSystem.updatePosition(newX, newY);
+            } else if (isEditing) {
+                const deltaX = e.clientX - editStart.x;
+                const deltaY = e.clientY - editStart.y;
+                
+                if (editType === 'scale') {
+                    // 크기 조정 (대각선 방향만, 감도 조절)
+                    const diagonalDistance = (deltaX + deltaY) / Math.sqrt(2); // 대각선 거리
+                    const scaleFactor = 1 + (diagonalDistance / 800); // 감도 조절
+                    const newScale = Math.max(0.1, Math.min(2, editStart.scale * scaleFactor));
+                    compositeSystem.updateScale(newScale);
+                } else if (editType === 'rotate') {
+                    // 회전 조정 (중심점 기준, 감도 조절)
+                    const centerX = editStart.x;
+                    const centerY = editStart.y;
+                    const startAngle = Math.atan2(editStart.y - centerY, editStart.x - centerX);
+                    const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                    const angleDiff = (currentAngle - startAngle) * (180 / Math.PI);
+                    const rotationSensitivity = 0.3; // 회전 감도 50%로 조절
+                    const newRotation = editStart.rotation + (angleDiff * rotationSensitivity);
+                    compositeSystem.updateRotation(newRotation);
+                }
+            }
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isEditing = false;
+        });
+        
+        // 블렌드 모드 버튼 이벤트
+        multiplyMode.addEventListener('click', () => {
+            compositeSystem.updateBlendMode('multiply');
+            multiplyMode.classList.add('active');
+            screenMode.classList.remove('active');
+        });
+        
+        screenMode.addEventListener('click', () => {
+            compositeSystem.updateBlendMode('screen');
+            screenMode.classList.add('active');
+            multiplyMode.classList.remove('active');
+        });
+        
+        // 버튼 이벤트
+        document.getElementById('nextToStep2').addEventListener('click', nextStep);
+        document.getElementById('nextToStep4').addEventListener('click', async () => {
+            // 크롭된 이미지 생성
+            if (processedCalligraphy) {
+                croppedCalligraphy = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
+                croppedCalligraphy = URL.createObjectURL(croppedCalligraphy);
+                
+                console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
+                
+                // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
+                setTimeout(() => {
+                    compositeSystem.detectImageBounds().then(() => {
+                        updateCompositePreview();
+                        // 편집 핸들 업데이트를 별도로 호출
+                        setTimeout(() => {
+                            updateEditHandles();
+                        }, 200);
+                    });
+                }, 100);
+            }
+            nextStep();
+        });
+        document.getElementById('downloadBtn').addEventListener('click', downloadFinalImage);
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            location.reload();
+        });
+        
+        // 파일 드래그 앤 드롭
+        document.querySelectorAll('.file-upload-area').forEach(area => {
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.classList.add('dragover');
+            });
+            
+            area.addEventListener('dragleave', () => {
+                area.classList.remove('dragover');
+            });
+            
+            area.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                area.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type.startsWith('image/')) {
+                        // 배경사진 업로드 영역인지 확인
+                        const isBackgroundArea = area.querySelector('#backgroundInput') || 
+                                               area.previousElementSibling?.id === 'backgroundInput';
+                        
+                        if (isBackgroundArea) {
+                            backgroundInput.files = files;
+                            backgroundInput.dispatchEvent(new Event('change'));
+                        } else {
+                            calligraphyInput.files = files;
+                            calligraphyInput.dispatchEvent(new Event('change'));
+                        }
+                    }
+                }
+            });
+        });
+        
+        // 햄버거 메뉴 동작
+        const menuBtn = document.getElementById('menu-hamburger');
+        const menuPopup = document.getElementById('menu-popup');
+        menuBtn.onclick = (e) => {
+          e.stopPropagation();
+          menuPopup.style.display = (menuPopup.style.display === 'none' || menuPopup.style.display === '') ? 'block' : 'none';
+        };
+        // 메뉴 바깥 클릭 시 닫기
+        window.addEventListener('click', (e) => {
+          if (menuPopup.style.display === 'block' && !menuPopup.contains(e.target) && e.target !== menuBtn) {
+            menuPopup.style.display = 'none';
+          }
+        });
+        
+        // 창 크기 변경 시 배경 이미지 재조정
+        window.addEventListener('resize', () => {
+            const compositeBackground = document.getElementById('compositeBackground');
+            if (compositeBackground && compositeBackground.src) {
+                setTimeout(() => {
+                    adjustBackgroundImageSize(compositeBackground);
+                }, 100);
+            }
+        });
+        
+        // 초기화
+        showStep(1);
+        
+        // 페이지 로드 시 단계 표시 초기화
+        window.addEventListener('load', () => {
+            showStep(1);
+        });
+    </script>
+</body>
+</html>
