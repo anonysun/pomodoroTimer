@@ -1,0 +1,25 @@
+{
+  "name": "pomodoro-timer-app",
+  "version": "1.0.0",
+  "description": "Pomodoro Timer and related web applications",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx live-server --port=3000 --open=/index.html",
+    "build": "echo 'No build process needed for static files'",
+    "preview": "npx serve . -p 3000"
+  },
+  "keywords": [
+    "pomodoro",
+    "timer",
+    "productivity",
+    "web-app"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2",
+    "serve": "^14.2.1"
+  }
+}
+
