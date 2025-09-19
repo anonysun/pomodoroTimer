@@ -26,6 +26,14 @@
             overflow-y: auto;
             margin: 0;
             padding: 0;
+            /* 모바일 터치 최적화 */
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         /* 모든 요소에 Jua 폰트 강제 적용 */
@@ -129,6 +137,14 @@
             cursor: move;
             z-index: 5;
             pointer-events: auto;
+            /* 모바일 터치 최적화 */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         .crop-handle {
@@ -140,6 +156,14 @@
             border-radius: 50%;
             cursor: pointer;
             z-index: 10;
+            /* 모바일 터치 최적화 */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         .crop-handle.nw { top: -10px; left: -10px; cursor: nw-resize; }
@@ -226,6 +250,22 @@
                 width: 100%;
                 height: 100%;
             }
+
+            /* 모바일에서 핸들 크기 증가 */
+            .edit-handle {
+                width: 50px !important;
+                height: 50px !important;
+                min-width: 50px !important;
+                min-height: 50px !important;
+                max-width: 50px !important;
+                max-height: 50px !important;
+                font-size: 20px;
+            }
+
+            .crop-handle {
+                width: 30px;
+                height: 30px;
+            }
         }
         
         .composite-preview .background-image {
@@ -259,6 +299,14 @@
             pointer-events: auto;
             cursor: move;
             background: transparent;
+            /* 모바일 터치 최적화 */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         .composite-preview .calligraphy-overlay img {
@@ -332,6 +380,14 @@
             min-height: 40px !important;
             max-width: 40px !important;
             max-height: 40px !important;
+            /* 모바일 터치 최적화 */
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
         
         .edit-handle:hover {
@@ -1160,16 +1216,29 @@
                 this.setupHandleEvents(handles);
             }
             
-            // 핸들 이벤트 설정
+            // 핸들 이벤트 설정 (마우스 + 터치)
             setupHandleEvents(handles) {
                 const img = document.getElementById('processedCalligraphy');
                 
                 handles.forEach(handle => {
+                    // 마우스 이벤트
                     handle.addEventListener('mousedown', (e) => {
                         console.log('크롭 핸들 드래그 시작:', handle.dataset.direction);
                         this.isResizing = true;
                         this.resizeHandle = handle.dataset.direction;
                         this.startPos = { x: e.clientX, y: e.clientY };
+                        this.startCropArea = { ...this.cropArea };
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+
+                    // 터치 이벤트
+                    handle.addEventListener('touchstart', (e) => {
+                        console.log('크롭 핸들 터치 시작:', handle.dataset.direction);
+                        this.isResizing = true;
+                        this.resizeHandle = handle.dataset.direction;
+                        const touch = e.touches[0];
+                        this.startPos = { x: touch.clientX, y: touch.clientY };
                         this.startCropArea = { ...this.cropArea };
                         e.preventDefault();
                         e.stopPropagation();
@@ -1961,11 +2030,21 @@
             
             // 크롭 핸들 이벤트는 updateHandles에서 설정됨
             
-            // 크롭 영역 드래그 이벤트
+            // 크롭 영역 드래그 이벤트 (마우스 + 터치)
             cropAreaEl.addEventListener('mousedown', (e) => {
                 console.log('크롭 영역 드래그 시작');
                 cropSystem.isDragging = true;
                 cropSystem.startPos = { x: e.clientX, y: e.clientY };
+                cropSystem.startCropArea = { ...cropSystem.cropArea };
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            cropAreaEl.addEventListener('touchstart', (e) => {
+                console.log('크롭 영역 터치 드래그 시작');
+                cropSystem.isDragging = true;
+                const touch = e.touches[0];
+                cropSystem.startPos = { x: touch.clientX, y: touch.clientY };
                 cropSystem.startCropArea = { ...cropSystem.cropArea };
                 e.preventDefault();
                 e.stopPropagation();
@@ -2048,9 +2127,96 @@
                     cropSystem.updateCropHandles();
                 }
             });
+
+            // 터치 이동 이벤트
+            document.addEventListener('touchmove', (e) => {
+                if (cropSystem.isResizing) {
+                    const displayBounds = cropSystem.getImageDisplayBounds(img);
+                    const touch = e.touches[0];
+                    const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100;
+                    const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100;
+                    
+                    console.log('크롭 터치 리사이징:', {
+                        direction: cropSystem.resizeHandle,
+                        deltaX, deltaY,
+                        startPos: cropSystem.startPos,
+                        currentPos: { x: touch.clientX, y: touch.clientY }
+                    });
+                    
+                    let newCropArea = { ...cropSystem.startCropArea };
+                    
+                    // 리사이징 방향에 따른 처리
+                    switch(cropSystem.resizeHandle) {
+                        case 'nw': // 왼쪽 위
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 'ne': // 오른쪽 위
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 'sw': // 왼쪽 아래
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'se': // 오른쪽 아래
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'n': // 위
+                            newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            break;
+                        case 's': // 아래
+                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            break;
+                        case 'w': // 왼쪽
+                            newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            break;
+                        case 'e': // 오른쪽
+                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            break;
+                    }
+                    
+                    // 경계 체크
+                    if (newCropArea.x + newCropArea.width > 100) {
+                        newCropArea.width = 100 - newCropArea.x;
+                    }
+                    if (newCropArea.y + newCropArea.height > 100) {
+                        newCropArea.height = 100 - newCropArea.y;
+                    }
+                    
+                    cropSystem.cropArea = newCropArea;
+                    cropSystem.updateCropHandles();
+                } else if (cropSystem.isDragging) {
+                    const displayBounds = cropSystem.getImageDisplayBounds(img);
+                    const touch = e.touches[0];
+                    const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100;
+                    const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100;
+                    
+                    let newCropArea = { ...cropSystem.startCropArea };
+                    newCropArea.x = Math.max(0, Math.min(100 - newCropArea.width, cropSystem.startCropArea.x + deltaX));
+                    newCropArea.y = Math.max(0, Math.min(100 - newCropArea.height, cropSystem.startCropArea.y + deltaY));
+                    
+                    cropSystem.cropArea = newCropArea;
+                    cropSystem.updateCropHandles();
+                }
+                e.preventDefault(); // 터치 스크롤 방지
+            });
             
             // 마우스 업 이벤트
             document.addEventListener('mouseup', () => {
+                cropSystem.isResizing = false;
+                cropSystem.isDragging = false;
+            });
+
+            // 터치 종료 이벤트
+            document.addEventListener('touchend', () => {
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
             });
@@ -2061,7 +2227,7 @@
         let editType = '';
         let editStart = { x: 0, y: 0, scale: 1, rotation: 0 };
         
-        // 새로운 합성 미리보기 드래그 이벤트
+        // 새로운 합성 미리보기 드래그 이벤트 (마우스 + 터치)
         calligraphyOverlay.addEventListener('mousedown', (e) => {
             // 편집 핸들이 아닌 경우에만 위치 이동
             if (!e.target.classList.contains('edit-handle')) {
@@ -2074,8 +2240,23 @@
                 e.preventDefault();
             }
         });
+
+        // 터치 이벤트 추가
+        calligraphyOverlay.addEventListener('touchstart', (e) => {
+            // 편집 핸들이 아닌 경우에만 위치 이동
+            if (!e.target.classList.contains('edit-handle')) {
+                isDragging = true;
+                const rect = compositePreview.getBoundingClientRect();
+                const touch = e.touches[0];
+                dragStart = {
+                    x: touch.clientX - rect.left,
+                    y: touch.clientY - rect.top
+                };
+                e.preventDefault();
+            }
+        });
         
-        // 크기 조정 핸들
+        // 크기 조정 핸들 (마우스 + 터치)
         document.getElementById('scaleHandle').addEventListener('mousedown', (e) => {
             isEditing = true;
             editType = 'scale';
@@ -2088,8 +2269,22 @@
             e.preventDefault();
             e.stopPropagation();
         });
+
+        document.getElementById('scaleHandle').addEventListener('touchstart', (e) => {
+            isEditing = true;
+            editType = 'scale';
+            const touch = e.touches[0];
+            editStart = {
+                x: touch.clientX,
+                y: touch.clientY,
+                scale: compositeSystem.scale,
+                rotation: compositeSystem.rotation
+            };
+            e.preventDefault();
+            e.stopPropagation();
+        });
         
-        // 회전 핸들
+        // 회전 핸들 (마우스 + 터치)
         document.getElementById('rotateHandle').addEventListener('mousedown', (e) => {
             isEditing = true;
             editType = 'rotate';
@@ -2102,7 +2297,22 @@
             e.preventDefault();
             e.stopPropagation();
         });
+
+        document.getElementById('rotateHandle').addEventListener('touchstart', (e) => {
+            isEditing = true;
+            editType = 'rotate';
+            const touch = e.touches[0];
+            editStart = {
+                x: touch.clientX,
+                y: touch.clientY,
+                scale: compositeSystem.scale,
+                rotation: compositeSystem.rotation
+            };
+            e.preventDefault();
+            e.stopPropagation();
+        });
         
+        // 마우스 이동 이벤트
         document.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 const rect = compositePreview.getBoundingClientRect();
@@ -2136,8 +2346,51 @@
                 }
             }
         });
+
+        // 터치 이동 이벤트
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const rect = compositePreview.getBoundingClientRect();
+                const touch = e.touches[0];
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100)));
+                const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100)));
+                
+                compositeSystem.updatePosition(newX, newY);
+            } else if (isEditing) {
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - editStart.x;
+                const deltaY = touch.clientY - editStart.y;
+                
+                if (editType === 'scale') {
+                    // 크기 조정 (대각선 방향만, 감도 조절)
+                    const diagonalDistance = (deltaX + deltaY) / Math.sqrt(2); // 대각선 거리
+                    const scaleFactor = 1 + (diagonalDistance / 800); // 감도 조절
+                    const newScale = Math.max(0.1, Math.min(2, editStart.scale * scaleFactor));
+                    compositeSystem.updateScale(newScale);
+                } else if (editType === 'rotate') {
+                    // 회전 조정 (중심점 기준, 감도 조절)
+                    const centerX = editStart.x;
+                    const centerY = editStart.y;
+                    const startAngle = Math.atan2(editStart.y - centerY, editStart.x - centerX);
+                    const currentAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX);
+                    const angleDiff = (currentAngle - startAngle) * (180 / Math.PI);
+                    const rotationSensitivity = 0.3; // 회전 감도 50%로 조절
+                    const newRotation = editStart.rotation + (angleDiff * rotationSensitivity);
+                    compositeSystem.updateRotation(newRotation);
+                }
+            }
+            e.preventDefault(); // 터치 스크롤 방지
+        });
         
         document.addEventListener('mouseup', () => {
+            isDragging = false;
+            isEditing = false;
+        });
+
+        document.addEventListener('touchend', () => {
             isDragging = false;
             isEditing = false;
         });
