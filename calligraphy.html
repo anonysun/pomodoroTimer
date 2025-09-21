@@ -1403,6 +1403,9 @@
                             pageY: touch.pageY
                         };
                         this.startCropArea = { ...this.cropArea };
+                        // 최소 이동 거리 설정 (의도하지 않은 움직임 방지)
+                        this.minMoveDistance = 5; // 5픽셀 이상 움직여야 리사이징 시작
+                        this.hasMoved = false;
                         e.preventDefault();
                         e.stopPropagation();
                     });
@@ -2781,6 +2784,12 @@
             
             // 크롭 영역 드래그 이벤트 (마우스 + 터치)
             cropAreaEl.addEventListener('mousedown', (e) => {
+                // 핸들을 클릭한 경우 드래그 시작하지 않음
+                if (e.target.classList.contains('crop-handle')) {
+                    console.log('핸들 클릭 감지 - 드래그 시작하지 않음');
+                    return;
+                }
+                
                 console.log('크롭 영역 드래그 시작');
                 cropSystem.isDragging = true;
                 cropSystem.startPos = { x: e.clientX, y: e.clientY };
@@ -2790,6 +2799,12 @@
             });
 
             cropAreaEl.addEventListener('touchstart', (e) => {
+                // 핸들을 클릭한 경우 드래그 시작하지 않음
+                if (e.target.classList.contains('crop-handle')) {
+                    console.log('핸들 클릭 감지 - 드래그 시작하지 않음');
+                    return;
+                }
+                
                 console.log('크롭 영역 터치 드래그 시작');
                 cropSystem.isDragging = true;
                 const touch = e.touches[0];
@@ -2801,6 +2816,9 @@
                     pageY: touch.pageY
                 };
                 cropSystem.startCropArea = { ...cropSystem.cropArea };
+                // 최소 이동 거리 설정 (의도하지 않은 움직임 방지)
+                cropSystem.minMoveDistance = 8; // 드래그는 조금 더 큰 거리 필요
+                cropSystem.hasMoved = false;
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -2892,8 +2910,24 @@
                     if (cropSystem.isResizing) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
-                        // 터치 감도 개선: 더 큰 이동 단위로 계산
-                        const sensitivity = 4.0; // 감도 배수 증가 (모바일 최적화)
+                        
+                        // 최소 이동 거리 확인
+                        const moveDistance = Math.sqrt(
+                            Math.pow(touch.clientX - cropSystem.startPos.x, 2) + 
+                            Math.pow(touch.clientY - cropSystem.startPos.y, 2)
+                        );
+                        
+                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 5)) {
+                            return; // 최소 이동 거리 미달 시 무시
+                        }
+                        
+                        if (!cropSystem.hasMoved) {
+                            cropSystem.hasMoved = true;
+                            console.log('최소 이동 거리 달성 - 리사이징 시작');
+                        }
+                        
+                        // 터치 감도 개선: 더 자연스러운 이동 단위로 계산
+                        const sensitivity = 2.0; // 감도 배수 조정 (자연스러운 터치 반응)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -2957,8 +2991,24 @@
                     } else if (cropSystem.isDragging) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
+                        
+                        // 최소 이동 거리 확인
+                        const moveDistance = Math.sqrt(
+                            Math.pow(touch.clientX - cropSystem.startPos.x, 2) + 
+                            Math.pow(touch.clientY - cropSystem.startPos.y, 2)
+                        );
+                        
+                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 8)) {
+                            return; // 최소 이동 거리 미달 시 무시
+                        }
+                        
+                        if (!cropSystem.hasMoved) {
+                            cropSystem.hasMoved = true;
+                            console.log('최소 이동 거리 달성 - 드래그 시작');
+                        }
+                        
                         // 드래깅 감도도 개선
-                        const sensitivity = 4.0; // 감도 배수 증가 (모바일 최적화)
+                        const sensitivity = 2.0; // 감도 배수 조정 (자연스러운 터치 반응)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
