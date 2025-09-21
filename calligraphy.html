@@ -268,14 +268,16 @@
                 }
             }
             
-            /* 미리보기 단계 버튼 영역 안전 여백 */
+            /* 모든 단계 버튼 영역 안전 여백 */
+            .step-1 .text-center.mt-8,
             .step-2 .text-center.mt-6,
             .step-3 .text-center.mt-6 {
                 padding-bottom: calc(20px + env(safe-area-inset-bottom));
                 margin-bottom: 20px;
             }
             
-            /* 미리보기 단계 버튼 */
+            /* 모든 단계 버튼 */
+            .step-1 button,
             .step-2 button,
             .step-3 button {
                 margin-bottom: calc(10px + env(safe-area-inset-bottom));
@@ -284,6 +286,11 @@
         
         /* 모바일 버튼 영역 안전 여백 */
         @media screen and (max-width: 768px) {
+            /* 첫 페이지 컨테이너 안전 여백 */
+            .step-1 .container {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            }
+            
             .flex.justify-center.space-x-4 {
                 padding-bottom: calc(20px + env(safe-area-inset-bottom));
                 margin-bottom: 20px;
@@ -1324,28 +1331,27 @@
                     handle.remove();
                 });
                 
-                // 부드러운 핸들 업데이트를 위한 requestAnimationFrame 사용
-                requestAnimationFrame(() => {
-                    console.log('새 핸들 생성 시작');
-                    
-                    // 8개 핸들 동적 생성
-                    const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
-                    directions.forEach(direction => {
-                        const handle = document.createElement('div');
-                        handle.className = `crop-handle ${direction}`;
-                        handle.dataset.direction = direction;
-                        cropAreaEl.appendChild(handle);
-                    });
-                    
-                    console.log('새 핸들 생성 완료');
-                    
-                    // 새로 생성된 핸들에 이벤트 리스너 추가
-                    const newHandles = cropAreaEl.querySelectorAll('.crop-handle');
-                    this.setupHandleEvents(newHandles);
-                    
-                    // 새로 생성된 핸들 위치 설정
-                    console.log(`새로 생성된 핸들 개수: ${newHandles.length}`);
-                    newHandles.forEach(handle => {
+                // 즉시 핸들 생성 (디바운싱 없이)
+                console.log('새 핸들 생성 시작');
+                
+                // 8개 핸들 동적 생성
+                const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
+                directions.forEach(direction => {
+                    const handle = document.createElement('div');
+                    handle.className = `crop-handle ${direction}`;
+                    handle.dataset.direction = direction;
+                    cropAreaEl.appendChild(handle);
+                });
+                
+                console.log('새 핸들 생성 완료');
+                
+                // 새로 생성된 핸들에 이벤트 리스너 추가
+                const newHandles = cropAreaEl.querySelectorAll('.crop-handle');
+                this.setupHandleEvents(newHandles);
+                
+                // 새로 생성된 핸들 위치 설정
+                console.log(`새로 생성된 핸들 개수: ${newHandles.length}`);
+                newHandles.forEach(handle => {
                         const direction = handle.dataset.direction;
                         
                         // 모든 핸들의 기본 스타일 초기화
@@ -1396,7 +1402,6 @@
                     });
                     
                     console.log('핸들 위치 설정 완료');
-                });
             }
             
             // 핸들 이벤트 설정 (마우스 + 터치)
@@ -3000,13 +3005,13 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 부드러운 업데이트를 위한 requestAnimationFrame 사용
+                        // 디바운싱을 위한 setTimeout 사용 (즉시 업데이트)
                         if (touchUpdateTimeout) {
-                            cancelAnimationFrame(touchUpdateTimeout);
+                            clearTimeout(touchUpdateTimeout);
                         }
-                        touchUpdateTimeout = requestAnimationFrame(() => {
+                        touchUpdateTimeout = setTimeout(() => {
                             cropSystem.updateCropHandles();
-                        });
+                        }, 16); // 60fps에 맞춰 16ms 디바운싱
                     } else if (cropSystem.isDragging) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
@@ -3028,13 +3033,13 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 부드러운 업데이트를 위한 requestAnimationFrame 사용
+                        // 디바운싱을 위한 setTimeout 사용 (즉시 업데이트)
                         if (touchUpdateTimeout) {
-                            cancelAnimationFrame(touchUpdateTimeout);
+                            clearTimeout(touchUpdateTimeout);
                         }
-                        touchUpdateTimeout = requestAnimationFrame(() => {
+                        touchUpdateTimeout = setTimeout(() => {
                             cropSystem.updateCropHandles();
-                        });
+                        }, 16); // 60fps에 맞춰 16ms 디바운싱
                     }
                 }
             }, { passive: false }); // passive: false로 설정하여 preventDefault 가능
@@ -3070,9 +3075,9 @@
                 cropSystem.hasMoved = false; // 상태 완전 리셋
                 cropSystem.minMoveDistance = 0; // 최소 이동 거리 리셋
                 
-                // 애니메이션 프레임 정리
+                // 디바운싱 타이머 정리
                 if (touchUpdateTimeout) {
-                    cancelAnimationFrame(touchUpdateTimeout);
+                    clearTimeout(touchUpdateTimeout);
                     touchUpdateTimeout = null;
                 }
                 
