@@ -257,14 +257,14 @@
         /* 모바일에서 컴포지트 프리뷰 높이 보정 */
         @media screen and (max-width: 768px) {
             .composite-preview-container {
-                height: calc(100vh - 320px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-                margin-bottom: 40px; /* 하단 여백 더 증가 */
-                padding-bottom: 20px;
+                height: calc(100vh - 450px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                margin-bottom: 50px; /* 하단 여백 더 증가 */
+                padding-bottom: 30px;
             }
             
             @supports (height: 100dvh) {
                 .composite-preview-container {
-                    height: calc(100dvh - 320px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                    height: calc(100dvh - 450px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 }
             }
             
@@ -2939,19 +2939,10 @@
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
                         
-                        // 최소 이동 거리 확인
-                        const moveDistance = Math.sqrt(
-                            Math.pow(touch.clientX - cropSystem.startPos.x, 2) + 
-                            Math.pow(touch.clientY - cropSystem.startPos.y, 2)
-                        );
-                        
-                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 2)) {
-                            return; // 최소 이동 거리 미달 시 무시
-                        }
-                        
+                        // 모바일에서는 즉시 움직임 허용 (hasMoved가 이미 true로 설정됨)
                         if (!cropSystem.hasMoved) {
                             cropSystem.hasMoved = true;
-                            console.log('최소 이동 거리 달성 - 리사이징 시작');
+                            console.log('리사이징 시작');
                         }
                         
                         // 터치 감도 개선: 자연스러운 반응
@@ -3020,19 +3011,10 @@
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
                         
-                        // 최소 이동 거리 확인
-                        const moveDistance = Math.sqrt(
-                            Math.pow(touch.clientX - cropSystem.startPos.x, 2) + 
-                            Math.pow(touch.clientY - cropSystem.startPos.y, 2)
-                        );
-                        
-                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 8)) {
-                            return; // 최소 이동 거리 미달 시 무시
-                        }
-                        
+                        // 모바일에서는 즉시 움직임 허용 (hasMoved가 이미 true로 설정됨)
                         if (!cropSystem.hasMoved) {
                             cropSystem.hasMoved = true;
-                            console.log('최소 이동 거리 달성 - 드래그 시작');
+                            console.log('드래그 시작');
                         }
                         
                         // 드래깅 감도도 개선 (자연스러운 반응)
@@ -3065,6 +3047,8 @@
                 
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
+                cropSystem.hasMoved = false; // 상태 완전 리셋
+                cropSystem.minMoveDistance = 0; // 최소 이동 거리 리셋
                 
                 // 마우스 종료 시점에서 크롭 핸들 즉시 업데이트
                 if (wasResizing || wasDragging) {
@@ -3083,6 +3067,8 @@
                 
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
+                cropSystem.hasMoved = false; // 상태 완전 리셋
+                cropSystem.minMoveDistance = 0; // 최소 이동 거리 리셋
                 
                 // 애니메이션 프레임 정리
                 if (touchUpdateTimeout) {
