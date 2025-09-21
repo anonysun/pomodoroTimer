@@ -262,14 +262,14 @@
         /* 모바일에서 컴포지트 프리뷰 높이 보정 */
         @media screen and (max-width: 768px) {
             .composite-preview-container {
-                height: calc(100vh - 500px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                height: calc(100vh - 600px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 margin-bottom: 60px; /* 하단 여백 더 증가 */
                 padding-bottom: 40px;
             }
             
             @supports (height: 100dvh) {
                 .composite-preview-container {
-                    height: calc(100dvh - 500px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                    height: calc(100dvh - 600px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 }
             }
             
@@ -1333,21 +1333,36 @@
             updateHandles(cropAreaEl) {
                 console.log('핸들 업데이트 시작 - 기존 핸들 제거');
                 
-                // 기존 핸들 완전 제거 (강제 제거)
+                // 기존 핸들 완전 제거 (강력한 제거)
                 const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
                 console.log(`제거할 핸들 개수: ${existingHandles.length}`);
-                existingHandles.forEach(handle => {
-                    // 모든 이벤트 리스너 제거
-                    const newHandle = handle.cloneNode(true);
-                    handle.parentNode.replaceChild(newHandle, handle);
-                    newHandle.remove();
+                
+                // 모든 핸들을 배열로 변환하여 순차 제거
+                const handlesArray = Array.from(existingHandles);
+                handlesArray.forEach((handle, index) => {
+                    console.log(`핸들 ${index + 1} 제거 중`);
+                    // 부모에서 완전히 제거
+                    if (handle.parentNode) {
+                        handle.parentNode.removeChild(handle);
+                    }
                 });
                 
                 // DOM 강제 업데이트 및 가비지 컬렉션 유도
                 cropAreaEl.innerHTML = '';
+                
+                // 추가 정리 작업
                 setTimeout(() => {
-                    // 빈 문자열로 설정 후 다시 설정
-                }, 0);
+                    // 남은 핸들 확인
+                    const remainingHandles = cropAreaEl.querySelectorAll('.crop-handle');
+                    if (remainingHandles.length > 0) {
+                        console.log(`남은 핸들 ${remainingHandles.length}개 강제 제거`);
+                        remainingHandles.forEach(handle => {
+                            if (handle.parentNode) {
+                                handle.parentNode.removeChild(handle);
+                            }
+                        });
+                    }
+                }, 10);
                 
                 // 즉시 핸들 생성 (디바운싱 없이)
                 console.log('새 핸들 생성 시작');
@@ -3085,13 +3100,13 @@
                 }
             });
 
-            // 터치 종료 이벤트 (안정적인 상태 관리)
+            // 터치 종료 이벤트 (강화된 안정성)
             document.addEventListener('touchend', (e) => {
                 // 리사이징 또는 드래깅 상태였는지 확인
                 const wasResizing = cropSystem.isResizing;
                 const wasDragging = cropSystem.isDragging;
                 
-                console.log('터치 종료:', { wasResizing, wasDragging, target: e.target });
+                console.log('터치 종료:', { wasResizing, wasDragging, target: e.target, time: Date.now() });
                 
                 // 상태 완전 리셋 (지연 없이 즉시)
                 cropSystem.isResizing = false;
@@ -3109,6 +3124,25 @@
                 }
                 
                 // 터치 이벤트 전파 방지
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false });
+            
+            // 터치 취소 이벤트 (드래그 중단 시)
+            document.addEventListener('touchcancel', (e) => {
+                console.log('터치 취소:', { wasResizing: cropSystem.isResizing, wasDragging: cropSystem.isDragging });
+                
+                // 상태 완전 리셋
+                cropSystem.isResizing = false;
+                cropSystem.isDragging = false;
+                cropSystem.hasMoved = false;
+                cropSystem.minMoveDistance = 0;
+                cropSystem.startPos = null;
+                cropSystem.startCropArea = null;
+                
+                // 크롭 핸들 업데이트
+                cropSystem.updateCropHandles();
+                
                 e.preventDefault();
                 e.stopPropagation();
             }, { passive: false });
@@ -3224,7 +3258,7 @@
                 if (editType === 'scale') {
                     // 크기 조정 (대각선 방향만, 감도 조절)
                     const diagonalDistance = (deltaX + deltaY) / Math.sqrt(2); // 대각선 거리
-                    const scaleFactor = 1 + (diagonalDistance / 800); // 감도 조절
+                    const scaleFactor = 1 + (diagonalDistance / 2000); // 감도 대폭 감소 (800 -> 2000)
                     const newScale = Math.max(0.1, Math.min(2, editStart.scale * scaleFactor));
                     compositeSystem.updateScale(newScale);
                     // 편집 중에는 편집 핸들 동기화 하지 않음 (깜빡거림 방지)
@@ -3273,7 +3307,7 @@
                     if (editType === 'scale') {
                         // 크기 조정 (대각선 방향만, 감도 조절)
                         const diagonalDistance = (deltaX + deltaY) / Math.sqrt(2); // 대각선 거리
-                        const scaleFactor = 1 + (diagonalDistance / 800); // 감도 조절
+                        const scaleFactor = 1 + (diagonalDistance / 2000); // 감도 대폭 감소 (800 -> 2000)
                         const newScale = Math.max(0.1, Math.min(2, editStart.scale * scaleFactor));
                         
                         requestAnimationFrame(() => {
