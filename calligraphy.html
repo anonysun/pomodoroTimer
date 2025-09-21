@@ -1403,7 +1403,7 @@
                         e.stopPropagation();
                     });
 
-                    // 터치 이벤트 (감도 개선)
+                    // 터치 이벤트 (모바일 최적화)
                     handle.addEventListener('touchstart', (e) => {
                         console.log('크롭 핸들 터치 시작:', handle.dataset.direction);
                         this.isResizing = true;
@@ -1417,9 +1417,9 @@
                             pageY: touch.pageY
                         };
                         this.startCropArea = { ...this.cropArea };
-                        // 최소 이동 거리 설정 (의도하지 않은 움직임 방지)
-                        this.minMoveDistance = 5; // 5픽셀 이상 움직여야 리사이징 시작
-                        this.hasMoved = false;
+                        // 모바일에서는 즉시 움직임 허용
+                        this.minMoveDistance = 0; // 모바일에서는 즉시 반응
+                        this.hasMoved = true; // 이미 움직인 것으로 간주
                         e.preventDefault();
                         e.stopPropagation();
                     });
@@ -2830,9 +2830,9 @@
                     pageY: touch.pageY
                 };
                 cropSystem.startCropArea = { ...cropSystem.cropArea };
-                // 최소 이동 거리 설정 (의도하지 않은 움직임 방지)
-                cropSystem.minMoveDistance = 8; // 드래그는 조금 더 큰 거리 필요
-                cropSystem.hasMoved = false;
+                // 모바일 최적화: 즉시 드래그 허용
+                cropSystem.minMoveDistance = 0; // 모바일에서는 즉시 반응
+                cropSystem.hasMoved = true; // 이미 움직인 것으로 간주
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -2931,7 +2931,7 @@
                             Math.pow(touch.clientY - cropSystem.startPos.y, 2)
                         );
                         
-                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 5)) {
+                        if (!cropSystem.hasMoved && moveDistance < (cropSystem.minMoveDistance || 2)) {
                             return; // 최소 이동 거리 미달 시 무시
                         }
                         
@@ -2940,8 +2940,8 @@
                             console.log('최소 이동 거리 달성 - 리사이징 시작');
                         }
                         
-                        // 터치 감도 개선: 더 자연스러운 이동 단위로 계산
-                        const sensitivity = 2.0; // 감도 배수 조정 (자연스러운 터치 반응)
+                        // 터치 감도 개선: 모바일 최적화
+                        const sensitivity = 3.0; // 모바일에서 더 높은 감도
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -3021,8 +3021,8 @@
                             console.log('최소 이동 거리 달성 - 드래그 시작');
                         }
                         
-                        // 드래깅 감도도 개선
-                        const sensitivity = 2.0; // 감도 배수 조정 (자연스러운 터치 반응)
+                        // 드래깅 감도도 개선 (모바일 최적화)
+                        const sensitivity = 3.0; // 모바일에서 더 높은 감도
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
