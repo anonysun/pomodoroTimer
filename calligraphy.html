@@ -209,7 +209,7 @@
             border-radius: 50%;
             cursor: pointer;
             z-index: 15;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
             /* 모바일 터치 최적화 */
             touch-action: none;
             -webkit-touch-callout: none;
@@ -222,6 +222,11 @@
             opacity: 1 !important;
             visibility: visible !important;
             display: block !important;
+            /* 그림자 고정 */
+            filter: none !important;
+            transform: none !important;
+            /* 그림자 누적 방지 */
+            will-change: auto !important;
         }
         
         .crop-handle:hover {
@@ -778,7 +783,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v1.2.0</span>
+                <span class="text-sm text-gray-300">v1.2.1</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -860,7 +865,7 @@
                     </div>
                     
                     <div class="text-center mt-6">
-                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full  text-lg shadow-lg hover:shadow-xl transition-all">
+                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full text-lg shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">
                             자르기 완료
                         </button>
                     </div>
@@ -1332,13 +1337,17 @@
                 const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
                 console.log(`제거할 핸들 개수: ${existingHandles.length}`);
                 existingHandles.forEach(handle => {
-                    // 이벤트 리스너 제거
-                    handle.replaceWith(handle.cloneNode(true));
-                    handle.remove();
+                    // 모든 이벤트 리스너 제거
+                    const newHandle = handle.cloneNode(true);
+                    handle.parentNode.replaceChild(newHandle, handle);
+                    newHandle.remove();
                 });
                 
-                // DOM 강제 업데이트
-                cropAreaEl.innerHTML = cropAreaEl.innerHTML;
+                // DOM 강제 업데이트 및 가비지 컬렉션 유도
+                cropAreaEl.innerHTML = '';
+                setTimeout(() => {
+                    // 빈 문자열로 설정 후 다시 설정
+                }, 0);
                 
                 // 즉시 핸들 생성 (디바운싱 없이)
                 console.log('새 핸들 생성 시작');
@@ -3076,21 +3085,21 @@
                 }
             });
 
-            // 터치 종료 이벤트
+            // 터치 종료 이벤트 (안정적인 상태 관리)
             document.addEventListener('touchend', (e) => {
                 // 리사이징 또는 드래깅 상태였는지 확인
                 const wasResizing = cropSystem.isResizing;
                 const wasDragging = cropSystem.isDragging;
                 
-                // 상태 완전 리셋
+                console.log('터치 종료:', { wasResizing, wasDragging, target: e.target });
+                
+                // 상태 완전 리셋 (지연 없이 즉시)
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
                 cropSystem.hasMoved = false;
                 cropSystem.minMoveDistance = 0;
                 cropSystem.startPos = null;
                 cropSystem.startCropArea = null;
-                
-                // 디바운싱 타이머 정리 (실시간 업데이트로 변경되어 불필요)
                 
                 // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
                 if (wasResizing || wasDragging) {
@@ -3359,39 +3368,83 @@
         
         // 버튼 이벤트
         document.getElementById('nextToStep2').addEventListener('click', nextStep);
-        document.getElementById('nextToStep4').addEventListener('click', async () => {
-            console.log('자르기 완료 버튼 클릭됨');
-            
-            try {
-                // 크롭된 이미지 생성
-                if (processedCalligraphy && cropSystem.cropArea) {
-                    console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                    
-                    const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
-                    croppedCalligraphy = URL.createObjectURL(croppedBlob);
-                    
-                    console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
-                    
-                    // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
-                    setTimeout(() => {
-                        compositeSystem.detectImageBounds().then(() => {
-                            updateCompositePreview();
-                            // 편집 핸들 업데이트를 별도로 호출
-                            setTimeout(() => {
-                                updateEditHandles();
-                            }, 200);
-                        });
-                    }, 100);
-                } else {
-                    console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                }
+        // 자르기 완료 버튼 이벤트 (강화된 처리)
+        const nextToStep4Btn = document.getElementById('nextToStep4');
+        if (nextToStep4Btn) {
+            // 클릭 이벤트
+            nextToStep4Btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('자르기 완료 버튼 클릭됨');
                 
-                nextStep();
-            } catch (error) {
-                console.error('자르기 완료 중 오류:', error);
-                alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-            }
-        });
+                try {
+                    // 크롭된 이미지 생성
+                    if (processedCalligraphy && cropSystem.cropArea) {
+                        console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                        
+                        const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
+                        croppedCalligraphy = URL.createObjectURL(croppedBlob);
+                        
+                        console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
+                        
+                        // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
+                        setTimeout(() => {
+                            compositeSystem.detectImageBounds().then(() => {
+                                updateCompositePreview();
+                                // 편집 핸들 업데이트를 별도로 호출
+                                setTimeout(() => {
+                                    updateEditHandles();
+                                }, 200);
+                            });
+                        }, 100);
+                    } else {
+                        console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                    }
+                    
+                    nextStep();
+                } catch (error) {
+                    console.error('자르기 완료 중 오류:', error);
+                    alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                }
+            });
+            
+            // 터치 이벤트
+            nextToStep4Btn.addEventListener('touchend', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('자르기 완료 버튼 터치됨');
+                
+                try {
+                    // 크롭된 이미지 생성
+                    if (processedCalligraphy && cropSystem.cropArea) {
+                        console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                        
+                        const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
+                        croppedCalligraphy = URL.createObjectURL(croppedBlob);
+                        
+                        console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
+                        
+                        // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
+                        setTimeout(() => {
+                            compositeSystem.detectImageBounds().then(() => {
+                                updateCompositePreview();
+                                // 편집 핸들 업데이트를 별도로 호출
+                                setTimeout(() => {
+                                    updateEditHandles();
+                                }, 200);
+                            });
+                        }, 100);
+                    } else {
+                        console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                    }
+                    
+                    nextStep();
+                } catch (error) {
+                    console.error('자르기 완료 중 오류:', error);
+                    alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                }
+            });
+        }
         document.getElementById('downloadBtn').addEventListener('click', downloadFinalImage);
         document.getElementById('restartBtn').addEventListener('click', () => {
             location.reload();
