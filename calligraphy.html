@@ -789,7 +789,7 @@
                         </div>
                         <div id="backgroundCheckArea" class="mt-4" style="display: none;">
                             <div class="text-center">
-                                <div class="text-3xl mb-4 text-green-500">☑️</div>
+                                <div class="text-3xl mb-4 text-green-500">✅</div>
                             </div>
                         </div>
                     </div>
@@ -1325,12 +1325,17 @@
             updateHandles(cropAreaEl) {
                 console.log('핸들 업데이트 시작 - 기존 핸들 제거');
                 
-                // 기존 핸들 완전 제거
+                // 기존 핸들 완전 제거 (강제 제거)
                 const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
                 console.log(`제거할 핸들 개수: ${existingHandles.length}`);
                 existingHandles.forEach(handle => {
+                    // 이벤트 리스너 제거
+                    handle.replaceWith(handle.cloneNode(true));
                     handle.remove();
                 });
+                
+                // DOM 강제 업데이트
+                cropAreaEl.innerHTML = cropAreaEl.innerHTML;
                 
                 // 즉시 핸들 생성 (디바운싱 없이)
                 console.log('새 핸들 생성 시작');
@@ -2951,8 +2956,8 @@
                             console.log('리사이징 시작');
                         }
                         
-                        // 터치 감도 개선: 자연스러운 반응
-                        const sensitivity = 1.5; // 감도 조정 (자연스러운 움직임)
+                        // 터치 감도 개선: 정확한 반응
+                        const sensitivity = 1.0; // 감도 조정 (정확한 움직임)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -3018,8 +3023,8 @@
                             console.log('드래그 시작');
                         }
                         
-                        // 드래깅 감도도 개선 (자연스러운 반응)
-                        const sensitivity = 1.5; // 감도 조정 (자연스러운 움직임)
+                        // 드래깅 감도도 개선 (정확한 반응)
+                        const sensitivity = 1.0; // 감도 조정 (정확한 움직임)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -3339,25 +3344,37 @@
         // 버튼 이벤트
         document.getElementById('nextToStep2').addEventListener('click', nextStep);
         document.getElementById('nextToStep4').addEventListener('click', async () => {
-            // 크롭된 이미지 생성
-            if (processedCalligraphy) {
-                croppedCalligraphy = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
-                croppedCalligraphy = URL.createObjectURL(croppedCalligraphy);
+            console.log('자르기 완료 버튼 클릭됨');
+            
+            try {
+                // 크롭된 이미지 생성
+                if (processedCalligraphy && cropSystem.cropArea) {
+                    console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                    
+                    const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
+                    croppedCalligraphy = URL.createObjectURL(croppedBlob);
+                    
+                    console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
+                    
+                    // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
+                    setTimeout(() => {
+                        compositeSystem.detectImageBounds().then(() => {
+                            updateCompositePreview();
+                            // 편집 핸들 업데이트를 별도로 호출
+                            setTimeout(() => {
+                                updateEditHandles();
+                            }, 200);
+                        });
+                    }, 100);
+                } else {
+                    console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
+                }
                 
-                console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
-                
-                // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
-                setTimeout(() => {
-                    compositeSystem.detectImageBounds().then(() => {
-                        updateCompositePreview();
-                        // 편집 핸들 업데이트를 별도로 호출
-                        setTimeout(() => {
-                            updateEditHandles();
-                        }, 200);
-                    });
-                }, 100);
+                nextStep();
+            } catch (error) {
+                console.error('자르기 완료 중 오류:', error);
+                alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
             }
-            nextStep();
         });
         document.getElementById('downloadBtn').addEventListener('click', downloadFinalImage);
         document.getElementById('restartBtn').addEventListener('click', () => {
