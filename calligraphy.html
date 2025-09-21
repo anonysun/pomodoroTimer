@@ -201,14 +201,14 @@
         }
         
         .crop-handle {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background: #667eea;
-            border: 3px solid white;
-            border-radius: 50%;
-            cursor: pointer;
-            z-index: 15;
+            position: absolute !important;
+            width: 24px !important;
+            height: 24px !important;
+            background: #667eea !important;
+            border: 3px solid white !important;
+            border-radius: 50% !important;
+            cursor: pointer !important;
+            z-index: 9999 !important;
             box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
             /* 모바일 터치 최적화 */
             touch-action: none;
@@ -224,9 +224,14 @@
             display: block !important;
             /* 그림자 고정 */
             filter: none !important;
-            transform: none !important;
             /* 그림자 누적 방지 */
             will-change: auto !important;
+            /* PC에서 확실히 보이도록 */
+            pointer-events: auto !important;
+            min-width: 24px !important;
+            min-height: 24px !important;
+            max-width: 24px !important;
+            max-height: 24px !important;
         }
         
         .crop-handle:hover {
@@ -589,6 +594,18 @@
             cursor: grabbing;
         }
         
+        /* 체크 아이콘 스타일 */
+        .check-icon {
+            display: inline-block;
+            animation: checkBounce 0.6s ease-in-out;
+        }
+        
+        @keyframes checkBounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
         /* 아이콘이 부모의 스케일 변환에 영향받지 않도록 */
         .calligraphy-overlay {
             transform-origin: center;
@@ -783,7 +800,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v1.2.1</span>
+                <span class="text-sm text-gray-300">v1.2.7</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -797,7 +814,12 @@
                         </div>
                         <div id="backgroundCheckArea" class="mt-4" style="display: none;">
                             <div class="text-center">
-                                <div class="text-3xl mb-4 text-green-500">✅</div>
+                                <div class="check-icon mb-4">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <circle cx="12" cy="12" r="10" fill="#10B981" stroke="#10B981" stroke-width="2"/>
+                                        <path d="M8 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1287,6 +1309,7 @@
                     return;
                 }
                 
+                console.log('updateCropHandles 호출됨 - 핸들 업데이트 시작');
                 const displayBounds = this.getImageDisplayBounds(img);
                 
                 // 크롭 영역을 이미지 컨테이너 기준 상대 좌표로 변환
@@ -1329,121 +1352,91 @@
                 this.updateHandles(cropAreaEl);
             }
 
-            // 핸들 위치 업데이트 (크롭 사각형에 정확히 붙이기)
+            // 핸들 위치 업데이트 (크롭 사각형에 정확히 붙이기) - 간단하고 확실한 방법
             updateHandles(cropAreaEl) {
-                console.log('핸들 업데이트 시작 - 기존 핸들 제거');
+                console.log('핸들 업데이트 시작 - 간단한 방법');
                 
-                // 기존 핸들 완전 제거 (강력한 제거)
+                // 기존 핸들 모두 제거
                 const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
-                console.log(`제거할 핸들 개수: ${existingHandles.length}`);
+                existingHandles.forEach(handle => handle.remove());
                 
-                // 모든 핸들을 배열로 변환하여 순차 제거
-                const handlesArray = Array.from(existingHandles);
-                handlesArray.forEach((handle, index) => {
-                    console.log(`핸들 ${index + 1} 제거 중`);
-                    // 부모에서 완전히 제거
-                    if (handle.parentNode) {
-                        handle.parentNode.removeChild(handle);
-                    }
-                });
+                // 크롭 영역이 보이는지 확인
+                const cropAreaRect = cropAreaEl.getBoundingClientRect();
+                console.log('크롭 영역 위치:', cropAreaRect);
                 
-                // DOM 강제 업데이트 및 가비지 컬렉션 유도
-                cropAreaEl.innerHTML = '';
-                
-                // 추가 정리 작업
-                setTimeout(() => {
-                    // 남은 핸들 확인
-                    const remainingHandles = cropAreaEl.querySelectorAll('.crop-handle');
-                    if (remainingHandles.length > 0) {
-                        console.log(`남은 핸들 ${remainingHandles.length}개 강제 제거`);
-                        remainingHandles.forEach(handle => {
-                            if (handle.parentNode) {
-                                handle.parentNode.removeChild(handle);
-                            }
-                        });
-                    }
-                }, 10);
-                
-                // 즉시 핸들 생성 (디바운싱 없이)
-                console.log('새 핸들 생성 시작');
-                
-                // 8개 핸들 동적 생성
+                // 8개 핸들 생성
                 const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
-                directions.forEach(direction => {
+                directions.forEach((direction, index) => {
                     const handle = document.createElement('div');
                     handle.className = `crop-handle ${direction}`;
                     handle.dataset.direction = direction;
                     
-                    // 스타일 강제 리셋
-                    handle.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-                    handle.style.filter = 'none';
-                    handle.style.transform = 'none';
-                    handle.style.opacity = '1';
-                    handle.style.visibility = 'visible';
-                    handle.style.display = 'block';
+                    // 기본 스타일 설정
+                    Object.assign(handle.style, {
+                        position: 'absolute',
+                        width: '24px',
+                        height: '24px',
+                        background: '#667eea',
+                        border: '3px solid white',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        zIndex: '9999',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        opacity: '1',
+                        visibility: 'visible',
+                        display: 'block',
+                        pointerEvents: 'auto'
+                    });
+                    
+                    // 위치 설정
+                    switch(direction) {
+                        case 'nw':
+                            handle.style.left = '-10px';
+                            handle.style.top = '-10px';
+                            break;
+                        case 'ne':
+                            handle.style.right = '-10px';
+                            handle.style.top = '-10px';
+                            break;
+                        case 'sw':
+                            handle.style.left = '-10px';
+                            handle.style.bottom = '-10px';
+                            break;
+                        case 'se':
+                            handle.style.right = '-10px';
+                            handle.style.bottom = '-10px';
+                            break;
+                        case 'n':
+                            handle.style.left = '50%';
+                            handle.style.top = '-10px';
+                            handle.style.transform = 'translateX(-50%)';
+                            break;
+                        case 's':
+                            handle.style.left = '50%';
+                            handle.style.bottom = '-10px';
+                            handle.style.transform = 'translateX(-50%)';
+                            break;
+                        case 'w':
+                            handle.style.left = '-10px';
+                            handle.style.top = '50%';
+                            handle.style.transform = 'translateY(-50%)';
+                            break;
+                        case 'e':
+                            handle.style.right = '-10px';
+                            handle.style.top = '50%';
+                            handle.style.transform = 'translateY(-50%)';
+                            break;
+                    }
                     
                     cropAreaEl.appendChild(handle);
+                    console.log(`핸들 ${index + 1} 생성 완료:`, direction);
                 });
                 
-                console.log('새 핸들 생성 완료');
-                
-                // 새로 생성된 핸들에 이벤트 리스너 추가
+                // 이벤트 리스너 추가
                 const newHandles = cropAreaEl.querySelectorAll('.crop-handle');
                 this.setupHandleEvents(newHandles);
                 
-                // 새로 생성된 핸들 위치 설정
-                console.log(`새로 생성된 핸들 개수: ${newHandles.length}`);
-                newHandles.forEach(handle => {
-                        const direction = handle.dataset.direction;
-                        
-                        // 모든 핸들의 기본 스타일 초기화
-                        handle.style.left = 'auto';
-                        handle.style.right = 'auto';
-                        handle.style.top = 'auto';
-                        handle.style.bottom = 'auto';
-                        handle.style.transform = 'none';
-                        
-                        switch(direction) {
-                            case 'nw':
-                                handle.style.left = '-10px';
-                                handle.style.top = '-10px';
-                                break;
-                            case 'ne':
-                                handle.style.right = '-10px';
-                                handle.style.top = '-10px';
-                                break;
-                            case 'sw':
-                                handle.style.left = '-10px';
-                                handle.style.bottom = '-10px';
-                                break;
-                            case 'se':
-                                handle.style.right = '-10px';
-                                handle.style.bottom = '-10px';
-                                break;
-                            case 'n':
-                                handle.style.left = '50%';
-                                handle.style.top = '-10px';
-                                handle.style.transform = 'translateX(-50%)';
-                                break;
-                            case 's':
-                                handle.style.left = '50%';
-                                handle.style.bottom = '-10px';
-                                handle.style.transform = 'translateX(-50%)';
-                                break;
-                            case 'w':
-                                handle.style.left = '-10px';
-                                handle.style.top = '50%';
-                                handle.style.transform = 'translateY(-50%)';
-                                break;
-                            case 'e':
-                                handle.style.right = '-10px';
-                                handle.style.top = '50%';
-                                handle.style.transform = 'translateY(-50%)';
-                                break;
-                        }
-                    });
-                    
-                    console.log('핸들 위치 설정 완료');
+                console.log(`총 ${newHandles.length}개 핸들 생성 완료`);
             }
             
             // 핸들 이벤트 설정 (마우스 + 터치)
@@ -2824,13 +2817,31 @@
         
         // 크롭 영역 초기화 (새로운 시스템 사용)
         function initCropArea() {
+            console.log('크롭 영역 초기화 시작');
             cropSystem.cropArea = { x: 10, y: 10, width: 80, height: 80 };
             
             // 이미지가 로드된 후 크롭 핸들 업데이트
             setTimeout(() => {
                 const cropAreaEl = document.getElementById('cropArea');
-                if (cropAreaEl) {
+                const img = document.getElementById('processedCalligraphy');
+                console.log('크롭 영역 요소 확인:', { cropAreaEl, img });
+                
+                if (cropAreaEl && img) {
+                    console.log('크롭 핸들 업데이트 시작');
                     cropSystem.updateCropHandles(cropAreaEl);
+                    
+                    // 핸들이 생성되었는지 확인
+                    setTimeout(() => {
+                        const handles = cropAreaEl.querySelectorAll('.crop-handle');
+                        console.log(`생성된 핸들 개수: ${handles.length}`);
+                        if (handles.length === 0) {
+                            console.error('핸들이 생성되지 않았습니다!');
+                            // 강제로 다시 시도
+                            cropSystem.updateCropHandles(cropAreaEl);
+                        }
+                    }, 200);
+                } else {
+                    console.error('크롭 영역 또는 이미지 요소를 찾을 수 없음');
                 }
             }, 100);
         }
@@ -2838,8 +2849,14 @@
         // 크롭 핸들 업데이트 (새로운 시스템 사용)
         function updateCropHandles() {
             const cropAreaEl = document.getElementById('cropArea');
-            if (cropAreaEl) {
+            const img = document.getElementById('processedCalligraphy');
+            console.log('updateCropHandles 호출:', { cropAreaEl, img });
+            
+            if (cropAreaEl && img) {
+                console.log('cropSystem.updateCropHandles 호출');
                 cropSystem.updateCropHandles(cropAreaEl);
+            } else {
+                console.error('크롭 영역 또는 이미지 요소를 찾을 수 없음');
             }
         }
         
