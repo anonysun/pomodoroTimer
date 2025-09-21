@@ -209,7 +209,7 @@
             border-radius: 50%;
             cursor: pointer;
             z-index: 15;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             /* 모바일 터치 최적화 */
             touch-action: none;
             -webkit-touch-callout: none;
@@ -222,9 +222,6 @@
             opacity: 1 !important;
             visibility: visible !important;
             display: block !important;
-            /* 그림자 고정 */
-            filter: none !important;
-            transform: none !important;
         }
         
         .crop-handle:hover {
@@ -780,6 +777,9 @@
     <div class="step active" id="step1">
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
+            <div class="text-center mb-4">
+                <span class="text-sm text-gray-300">v1.2.0</span>
+            </div>
             
             <div class="max-w-2xl mx-auto">
                     <div class="control-panel">
@@ -792,7 +792,7 @@
                         </div>
                         <div id="backgroundCheckArea" class="mt-4" style="display: none;">
                             <div class="text-center">
-                                <div class="text-3xl mb-4 text-green-500">✓</div>
+                                <div class="text-3xl mb-4 text-green-500">✅</div>
                             </div>
                         </div>
                     </div>
@@ -860,7 +860,7 @@
                     </div>
                     
                     <div class="text-center mt-6">
-                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full text-lg shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">
+                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full  text-lg shadow-lg hover:shadow-xl transition-all">
                             자르기 완료
                         </button>
                     </div>
@@ -887,8 +887,8 @@
                     <div class="control-panel">
                         <div class="control-group mt-4">
                             <div class="blend-mode-buttons justify-center">
-                                <button id="multiplyMode" class="active bg-white text-black px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all">검은 글씨</button>
-                                <button id="screenMode" class="bg-black text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all">흰 글씨</button>
+                                <button id="multiplyMode" class="active bg-white text-black px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">검은 글씨</button>
+                                <button id="screenMode" class="bg-black text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">흰 글씨</button>
                             </div>
                         </div>
                         <div class="composite-preview-container">
@@ -908,10 +908,10 @@
                         
                         
                         <div class="text-center mt-6 space-x-4">
-                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full  text-base shadow-lg hover:shadow-xl transition-all">
+                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">
                                 다시 시작
                             </button>
-                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full  text-base shadow-lg hover:shadow-xl transition-all">
+                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">
                                 다운로드
                             </button>
                         </div>
@@ -1349,6 +1349,15 @@
                     const handle = document.createElement('div');
                     handle.className = `crop-handle ${direction}`;
                     handle.dataset.direction = direction;
+                    
+                    // 스타일 강제 리셋
+                    handle.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                    handle.style.filter = 'none';
+                    handle.style.transform = 'none';
+                    handle.style.opacity = '1';
+                    handle.style.visibility = 'visible';
+                    handle.style.display = 'block';
+                    
                     cropAreaEl.appendChild(handle);
                 });
                 
@@ -2861,6 +2870,10 @@
                 // 모바일 최적화: 즉시 드래그 허용
                 cropSystem.minMoveDistance = 0; // 모바일에서는 즉시 반응
                 cropSystem.hasMoved = true; // 이미 움직인 것으로 간주
+                
+                // 터치 시작 시점에서 다른 모든 상태 리셋
+                cropSystem.isResizing = false;
+                
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -3069,15 +3082,15 @@
                 const wasResizing = cropSystem.isResizing;
                 const wasDragging = cropSystem.isDragging;
                 
-                console.log('터치 종료:', { wasResizing, wasDragging });
-                
-                // 상태 완전 리셋 (지연 없이 즉시)
+                // 상태 완전 리셋
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
                 cropSystem.hasMoved = false;
                 cropSystem.minMoveDistance = 0;
                 cropSystem.startPos = null;
                 cropSystem.startCropArea = null;
+                
+                // 디바운싱 타이머 정리 (실시간 업데이트로 변경되어 불필요)
                 
                 // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
                 if (wasResizing || wasDragging) {
@@ -3346,82 +3359,39 @@
         
         // 버튼 이벤트
         document.getElementById('nextToStep2').addEventListener('click', nextStep);
-        // 자르기 완료 버튼 이벤트 (강화된 이벤트 처리)
-        const nextToStep4Btn = document.getElementById('nextToStep4');
-        if (nextToStep4Btn) {
-            nextToStep4Btn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('자르기 완료 버튼 클릭됨');
-                
-                try {
-                    // 크롭된 이미지 생성
-                    if (processedCalligraphy && cropSystem.cropArea) {
-                        console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                        
-                        const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
-                        croppedCalligraphy = URL.createObjectURL(croppedBlob);
-                        
-                        console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
-                        
-                        // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
-                        setTimeout(() => {
-                            compositeSystem.detectImageBounds().then(() => {
-                                updateCompositePreview();
-                                // 편집 핸들 업데이트를 별도로 호출
-                                setTimeout(() => {
-                                    updateEditHandles();
-                                }, 200);
-                            });
-                        }, 100);
-                    } else {
-                        console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                    }
-                    
-                    nextStep();
-                } catch (error) {
-                    console.error('자르기 완료 중 오류:', error);
-                    alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-                }
-            });
+        document.getElementById('nextToStep4').addEventListener('click', async () => {
+            console.log('자르기 완료 버튼 클릭됨');
             
-            // 터치 이벤트도 추가
-            nextToStep4Btn.addEventListener('touchend', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('자르기 완료 버튼 터치됨');
-                
-                try {
-                    // 크롭된 이미지 생성
-                    if (processedCalligraphy && cropSystem.cropArea) {
-                        console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                        
-                        const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
-                        croppedCalligraphy = URL.createObjectURL(croppedBlob);
-                        
-                        console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
-                        
-                        // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
-                        setTimeout(() => {
-                            compositeSystem.detectImageBounds().then(() => {
-                                updateCompositePreview();
-                                // 편집 핸들 업데이트를 별도로 호출
-                                setTimeout(() => {
-                                    updateEditHandles();
-                                }, 200);
-                            });
-                        }, 100);
-                    } else {
-                        console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
-                    }
+            try {
+                // 크롭된 이미지 생성
+                if (processedCalligraphy && cropSystem.cropArea) {
+                    console.log('크롭 시작:', { processedCalligraphy, cropArea: cropSystem.cropArea });
                     
-                    nextStep();
-                } catch (error) {
-                    console.error('자르기 완료 중 오류:', error);
-                    alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+                    const croppedBlob = await cropSystem.cropImage(processedCalligraphy, cropSystem.cropArea);
+                    croppedCalligraphy = URL.createObjectURL(croppedBlob);
+                    
+                    console.log('크롭된 이미지 생성 완료:', croppedCalligraphy);
+                    
+                    // 크롭 완료 후 합성 시스템의 경계 다시 감지 및 미리보기 업데이트
+                    setTimeout(() => {
+                        compositeSystem.detectImageBounds().then(() => {
+                            updateCompositePreview();
+                            // 편집 핸들 업데이트를 별도로 호출
+                            setTimeout(() => {
+                                updateEditHandles();
+                            }, 200);
+                        });
+                    }, 100);
+                } else {
+                    console.error('크롭할 이미지 또는 크롭 영역이 없음:', { processedCalligraphy, cropArea: cropSystem.cropArea });
                 }
-            });
-        }
+                
+                nextStep();
+            } catch (error) {
+                console.error('자르기 완료 중 오류:', error);
+                alert('자르기 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+            }
+        });
         document.getElementById('downloadBtn').addEventListener('click', downloadFinalImage);
         document.getElementById('restartBtn').addEventListener('click', () => {
             location.reload();
