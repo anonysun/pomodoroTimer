@@ -254,9 +254,8 @@
             justify-content: center !important;
             align-items: center !important;
             width: 100% !important;
-            height: calc(100vh - 250px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
-            height: calc(100dvh - 250px); /* 동적 뷰포트 높이 사용 */
-            padding: 10px;
+            height: 500px; /* 기본 고정 높이 */
+            padding: 20px;
             box-sizing: border-box;
             text-align: center;
             position: static;
@@ -331,58 +330,61 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             background: transparent;
             margin: 0 auto !important;
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
+            width: 450px; /* 기본 고정 너비 */
+            height: 450px; /* 기본 고정 높이 - 정사각형 */
+            max-width: 450px;
+            max-height: 450px;
             text-align: center;
-            aspect-ratio: auto;
+            aspect-ratio: 1; /* 정사각형 비율 강제 */
         }
         
-        /* 770px 이상에서 컨테이너 크기 고정 */
-        @media (min-width: 770px) {
+        /* 481px 이상에서 데스크톱 최적화 */
+        @media (min-width: 481px) {
             .composite-preview-container {
-                height: calc(100vh - 200px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+                height: 500px; /* 고정 높이로 설정 */
                 padding: 20px;
                 width: 100% !important;
             }
             
             .composite-preview {
-                max-width: 100%;
-                max-height: 100%;
-                width: 100%;
-                height: 100%;
+                width: 450px; /* 고정 너비 */
+                height: 450px; /* 고정 높이 - 정사각형 */
+                max-width: 450px;
+                max-height: 450px;
+                margin: 0 auto;
             }
         }
         
         /* 1200px 이상에서 더 큰 컨테이너 */
         @media (min-width: 1200px) {
             .composite-preview-container {
-                height: calc(100vh - 250px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+                height: 600px; /* 고정 높이로 설정 */
                 padding: 30px;
             }
             
             .composite-preview {
-                max-width: 100%;
-                max-height: 100%;
-                width: 100%;
-                height: 100%;
+                width: 550px; /* 고정 너비 */
+                height: 550px; /* 고정 높이 - 정사각형 */
+                max-width: 550px;
+                max-height: 550px;
+                margin: 0 auto;
             }
         }
         
         /* 480px 이하에서 모바일 최적화 */
         @media (max-width: 480px) {
             .composite-preview-container {
-                height: calc(100vh - 250px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
-                padding: 5px;
+                height: 400px; /* 고정 높이로 설정 */
+                padding: 10px;
                 overflow: hidden; /* 스크롤 방지 */
             }
             
             .composite-preview {
-                max-width: 100%;
-                max-height: 100%;
-                width: 100%;
-                height: 100%;
+                width: 350px; /* 고정 너비 */
+                height: 350px; /* 고정 높이 - 정사각형 */
+                max-width: 350px;
+                max-height: 350px;
+                margin: 0 auto;
             }
 
             /* 모바일에서 핸들 크기 증가 */
@@ -537,8 +539,8 @@
         
         .edit-handle {
             position: absolute;
-            width: 40px !important;
-            height: 40px !important;
+            width: 80px !important;
+            height: 80px !important;
             background: #667eea;
             border: 3px solid #ffffff;
             border-radius: 50%;
@@ -547,7 +549,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 32px;
             font-weight: bold;
             color: #ffffff;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
@@ -556,10 +558,10 @@
             mix-blend-mode: normal !important;
             filter: none !important;
             transform: none !important;
-            min-width: 40px !important;
-            min-height: 40px !important;
-            max-width: 40px !important;
-            max-height: 40px !important;
+            min-width: 80px !important;
+            min-height: 80px !important;
+            max-width: 80px !important;
+            max-height: 80px !important;
             opacity: 1 !important; /* 항상 보이도록 강제 */
             visibility: visible !important; /* 항상 보이도록 강제 */
             /* 모바일 터치 최적화 */
@@ -579,14 +581,14 @@
         }
         
         .edit-handle.scale {
-            bottom: -20px;
-            right: -20px;
+            bottom: -40px;
+            right: -40px;
             cursor: se-resize;
         }
         
         .edit-handle.rotate {
-            top: -20px;
-            right: -20px;
+            top: -40px;
+            right: -40px;
             cursor: grab;
         }
         
@@ -800,7 +802,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v1.2.8</span>
+                <span class="text-sm text-gray-300">v0.1</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -914,8 +916,8 @@
                     <div class="control-panel">
                         <div class="control-group mt-4">
                             <div class="blend-mode-buttons justify-center">
-                                <button id="multiplyMode" class="active bg-white text-black px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">검은 글씨</button>
-                                <button id="screenMode" class="bg-black text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">흰 글씨</button>
+                                <button id="multiplyMode" class="active bg-white text-black px-6 py-2 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">검은 글씨</button>
+                                <button id="screenMode" class="bg-black text-white px-6 py-2 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">흰 글씨</button>
                             </div>
                         </div>
                         <div class="composite-preview-container">
@@ -981,6 +983,14 @@
         let currentPosition = { x: 50, y: 50 }; // 퍼센트
         let currentScale = 0.3; // 배경의 30% 크기로 시작 (더 작게)
         let currentRotation = 0;
+        
+        // 터치 디바운싱을 위한 변수들
+        let touchEndDebounceTimer = null;
+        let touchEndDebounceDelay = 150; // 150ms 디바운싱
+        let lastTouchEndTime = 0;
+        
+        // 드래그 시작점 저장 (상대적 이동을 위해)
+        let dragStartPosition = { x: 0, y: 0 };
         let currentBlendMode = 'multiply';
         // cropArea는 이제 cropSystem.cropArea로 관리됨
         
@@ -1695,6 +1705,12 @@
         
         // 편집 핸들을 크롭된 이미지 내용과 실시간 동기화 (반응형 개선)
         function syncEditHandlesWithContent() {
+            // 드래그 중이거나 편집 중일 때는 동기화하지 않음 (크기 변경 방지)
+            if (isDragging || isEditing) {
+                console.log('드래그/편집 중 - 편집 핸들 동기화 건너뜀');
+                return;
+            }
+            
             const editHandles = document.getElementById('editHandles');
             const calligraphyOverlay = document.getElementById('calligraphyOverlay');
             const compositePreview = document.getElementById('compositePreview');
@@ -1792,6 +1808,11 @@
             // 실시간 위치 동기화를 위한 MutationObserver 설정
             if (!window.editHandlesObserver) {
                 window.editHandlesObserver = new MutationObserver(() => {
+                    // 드래그 중이거나 편집 중일 때는 MutationObserver 비활성화
+                    if (isDragging || isEditing) {
+                        console.log('드래그/편집 중 - MutationObserver 건너뜀');
+                        return;
+                    }
                     syncEditHandlesWithContent();
                 });
                 
@@ -1806,6 +1827,12 @@
             if (!window.editHandlesResizeObserver) {
                 let resizeTimeout;
                 window.editHandlesResizeObserver = new ResizeObserver(() => {
+                    // 드래그 중이거나 편집 중일 때는 ResizeObserver 비활성화
+                    if (isDragging || isEditing) {
+                        console.log('드래그/편집 중 - ResizeObserver 건너뜀');
+                        return;
+                    }
+                    
                     // 디바운싱으로 성능 최적화
                     clearTimeout(resizeTimeout);
                     resizeTimeout = setTimeout(() => {
@@ -1833,26 +1860,26 @@
             const rotateHandle = document.getElementById('rotateHandle');
             
             if (scaleHandle) {
-                scaleHandle.style.right = '-20px';
-                scaleHandle.style.bottom = '-20px';
-                scaleHandle.style.width = '40px !important';
-                scaleHandle.style.height = '40px !important';
-                scaleHandle.style.minWidth = '40px !important';
-                scaleHandle.style.minHeight = '40px !important';
-                scaleHandle.style.maxWidth = '40px !important';
-                scaleHandle.style.maxHeight = '40px !important';
+                scaleHandle.style.right = '-40px';
+                scaleHandle.style.bottom = '-40px';
+                scaleHandle.style.width = '80px !important';
+                scaleHandle.style.height = '80px !important';
+                scaleHandle.style.minWidth = '80px !important';
+                scaleHandle.style.minHeight = '80px !important';
+                scaleHandle.style.maxWidth = '80px !important';
+                scaleHandle.style.maxHeight = '80px !important';
                 scaleHandle.style.transform = 'none !important';
             }
             
             if (rotateHandle) {
-                rotateHandle.style.right = '-20px';
-                rotateHandle.style.top = '-20px';
-                rotateHandle.style.width = '40px !important';
-                rotateHandle.style.height = '40px !important';
-                rotateHandle.style.minWidth = '40px !important';
-                rotateHandle.style.minHeight = '40px !important';
-                rotateHandle.style.maxWidth = '40px !important';
-                rotateHandle.style.maxHeight = '40px !important';
+                rotateHandle.style.right = '-40px';
+                rotateHandle.style.top = '-40px';
+                rotateHandle.style.width = '80px !important';
+                rotateHandle.style.height = '80px !important';
+                rotateHandle.style.minWidth = '80px !important';
+                rotateHandle.style.minHeight = '80px !important';
+                rotateHandle.style.maxWidth = '80px !important';
+                rotateHandle.style.maxHeight = '80px !important';
                 rotateHandle.style.transform = 'none !important';
             }
             
@@ -2118,22 +2145,22 @@
                 const rotateHandle = document.getElementById('rotateHandle');
                 
                 if (scaleHandle) {
-                    scaleHandle.style.width = '40px !important';
-                    scaleHandle.style.height = '40px !important';
-                    scaleHandle.style.minWidth = '40px !important';
-                    scaleHandle.style.minHeight = '40px !important';
-                    scaleHandle.style.maxWidth = '40px !important';
-                    scaleHandle.style.maxHeight = '40px !important';
+                    scaleHandle.style.width = '80px !important';
+                    scaleHandle.style.height = '80px !important';
+                    scaleHandle.style.minWidth = '80px !important';
+                    scaleHandle.style.minHeight = '80px !important';
+                    scaleHandle.style.maxWidth = '80px !important';
+                    scaleHandle.style.maxHeight = '80px !important';
                     scaleHandle.style.transform = 'none !important';
                 }
                 
                 if (rotateHandle) {
-                    rotateHandle.style.width = '40px !important';
-                    rotateHandle.style.height = '40px !important';
-                    rotateHandle.style.minWidth = '40px !important';
-                    rotateHandle.style.minHeight = '40px !important';
-                    rotateHandle.style.maxWidth = '40px !important';
-                    rotateHandle.style.maxHeight = '40px !important';
+                    rotateHandle.style.width = '80px !important';
+                    rotateHandle.style.height = '80px !important';
+                    rotateHandle.style.minWidth = '80px !important';
+                    rotateHandle.style.minHeight = '80px !important';
+                    rotateHandle.style.maxWidth = '80px !important';
+                    rotateHandle.style.maxHeight = '80px !important';
                     rotateHandle.style.transform = 'none !important';
                 }
                 
@@ -2274,6 +2301,30 @@
                 this.position.x = Math.max(0, Math.min(100, x));
                 this.position.y = Math.max(0, Math.min(100, y));
                 this.updatePreview();
+            }
+
+            // 위치만 업데이트 (크기 재조정 없음)
+            updatePositionOnly(x, y) {
+                this.position.x = Math.max(0, Math.min(100, x));
+                this.position.y = Math.max(0, Math.min(100, y));
+                
+                // 위치와 변환만 적용 (크기 재조정 없음)
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                const editHandles = document.getElementById('editHandles');
+                
+                if (calligraphyOverlay) {
+                    const transform = `translate(-50%, -50%) scale(${this.scale}) rotate(${this.rotation}deg)`;
+                    calligraphyOverlay.style.left = `${this.position.x}%`;
+                    calligraphyOverlay.style.top = `${this.position.y}%`;
+                    calligraphyOverlay.style.transform = transform;
+                    
+                    // 편집 핸들도 동일하게 업데이트
+                    if (editHandles) {
+                        editHandles.style.left = calligraphyOverlay.style.left;
+                        editHandles.style.top = calligraphyOverlay.style.top;
+                        editHandles.style.transform = calligraphyOverlay.style.transform;
+                    }
+                }
             }
 
             // 크기 업데이트
@@ -2997,11 +3048,17 @@
                 }
             });
 
-            // 터치 이동 이벤트 (최적화 및 감도 개선)
+            // 터치 이동 이벤트 (최적화 및 감도 개선, 디바운싱 지원)
             document.addEventListener('touchmove', (e) => {
                 if (cropSystem.isResizing || cropSystem.isDragging) {
                     e.preventDefault(); // 터치 스크롤 방지
                     e.stopPropagation();
+                    
+                    // 터치 이동 중에는 디바운싱 타이머 리셋 (드래그가 계속되고 있음을 표시)
+                    if (touchEndDebounceTimer) {
+                        clearTimeout(touchEndDebounceTimer);
+                        touchEndDebounceTimer = null;
+                    }
                     
                     if (cropSystem.isResizing) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
@@ -3115,48 +3172,95 @@
                 }
             });
 
-            // 터치 종료 이벤트 (강화된 안정성)
+            // 터치 종료 이벤트 (디바운싱 적용)
             document.addEventListener('touchend', (e) => {
-                // 리사이징 또는 드래깅 상태였는지 확인
+                const currentTime = Date.now();
                 const wasResizing = cropSystem.isResizing;
                 const wasDragging = cropSystem.isDragging;
                 
-                console.log('터치 종료:', { wasResizing, wasDragging, target: e.target, time: Date.now() });
+                console.log('터치 종료:', { wasResizing, wasDragging, target: e.target, time: currentTime });
                 
-                // 상태 완전 리셋 (지연 없이 즉시)
-                cropSystem.isResizing = false;
-                cropSystem.isDragging = false;
-                cropSystem.hasMoved = false;
-                cropSystem.minMoveDistance = 0;
-                cropSystem.startPos = null;
-                cropSystem.startCropArea = null;
-                
-                // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
-                if (wasResizing || wasDragging) {
-                    // 즉시 업데이트 (지연 없음)
-                    cropSystem.updateCropHandles();
-                    console.log('터치 종료 후 크롭 핸들 업데이트 완료');
+                // 기존 타이머가 있다면 취소
+                if (touchEndDebounceTimer) {
+                    clearTimeout(touchEndDebounceTimer);
                 }
+                
+                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시
+                if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
+                    console.log('터치 종료 디바운싱 적용 - 이벤트 무시');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                
+                lastTouchEndTime = currentTime;
+                
+                // 디바운싱 타이머 설정
+                touchEndDebounceTimer = setTimeout(() => {
+                    console.log('터치 종료 디바운싱 완료 - 상태 리셋');
+                    
+                    // 상태 완전 리셋
+                    cropSystem.isResizing = false;
+                    cropSystem.isDragging = false;
+                    cropSystem.hasMoved = false;
+                    cropSystem.minMoveDistance = 0;
+                    cropSystem.startPos = null;
+                    cropSystem.startCropArea = null;
+                    
+                    // 터치 종료 시점에서 크롭 핸들 업데이트
+                    if (wasResizing || wasDragging) {
+                        cropSystem.updateCropHandles();
+                        console.log('터치 종료 후 크롭 핸들 업데이트 완료');
+                    }
+                    
+                    touchEndDebounceTimer = null;
+                }, touchEndDebounceDelay);
                 
                 // 터치 이벤트 전파 방지
                 e.preventDefault();
                 e.stopPropagation();
             }, { passive: false });
             
-            // 터치 취소 이벤트 (드래그 중단 시)
+            // 터치 취소 이벤트 (드래그 중단 시, 디바운싱 적용)
             document.addEventListener('touchcancel', (e) => {
-                console.log('터치 취소:', { wasResizing: cropSystem.isResizing, wasDragging: cropSystem.isDragging });
+                const currentTime = Date.now();
+                const wasResizing = cropSystem.isResizing;
+                const wasDragging = cropSystem.isDragging;
                 
-                // 상태 완전 리셋
-                cropSystem.isResizing = false;
-                cropSystem.isDragging = false;
-                cropSystem.hasMoved = false;
-                cropSystem.minMoveDistance = 0;
-                cropSystem.startPos = null;
-                cropSystem.startCropArea = null;
+                console.log('터치 취소:', { wasResizing, wasDragging, time: currentTime });
                 
-                // 크롭 핸들 업데이트
-                cropSystem.updateCropHandles();
+                // 기존 타이머가 있다면 취소
+                if (touchEndDebounceTimer) {
+                    clearTimeout(touchEndDebounceTimer);
+                }
+                
+                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 취소 이벤트를 무시
+                if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
+                    console.log('터치 취소 디바운싱 적용 - 이벤트 무시');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                
+                lastTouchEndTime = currentTime;
+                
+                // 디바운싱 타이머 설정
+                touchEndDebounceTimer = setTimeout(() => {
+                    console.log('터치 취소 디바운싱 완료 - 상태 리셋');
+                    
+                    // 상태 완전 리셋
+                    cropSystem.isResizing = false;
+                    cropSystem.isDragging = false;
+                    cropSystem.hasMoved = false;
+                    cropSystem.minMoveDistance = 0;
+                    cropSystem.startPos = null;
+                    cropSystem.startCropArea = null;
+                    
+                    // 크롭 핸들 업데이트
+                    cropSystem.updateCropHandles();
+                    
+                    touchEndDebounceTimer = null;
+                }, touchEndDebounceDelay);
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -3178,6 +3282,11 @@
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top
                 };
+                // 드래그 시작 시점의 글씨 위치 저장 (상대적 이동을 위해)
+                dragStartPosition = {
+                    x: compositeSystem.position.x,
+                    y: compositeSystem.position.y
+                };
                 e.preventDefault();
             }
         });
@@ -3192,6 +3301,11 @@
                 dragStart = {
                     x: touch.clientX - rect.left,
                     y: touch.clientY - rect.top
+                };
+                // 드래그 시작 시점의 글씨 위치 저장 (상대적 이동을 위해)
+                dragStartPosition = {
+                    x: compositeSystem.position.x,
+                    y: compositeSystem.position.y
                 };
                 e.preventDefault();
                 e.stopPropagation();
@@ -3258,14 +3372,23 @@
         document.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 const rect = compositePreview.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
                 
-                    const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100)));
-                    const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100)));
-                    
-                    compositeSystem.updatePosition(newX, newY);
-                    // 드래그 중에는 편집 핸들 동기화 하지 않음 (깜빡거림 방지)
+                // 드래그 시작점과 현재 위치의 차이 계산
+                const deltaX = currentX - dragStart.x;
+                const deltaY = currentY - dragStart.y;
+                
+                // 퍼센트로 변환 (컨테이너 크기 기준)
+                const deltaXPercent = (deltaX / rect.width) * 100;
+                const deltaYPercent = (deltaY / rect.height) * 100;
+                
+                // 시작 위치에서 상대적 이동량만큼 이동
+                const newX = Math.max(0, Math.min(100, dragStartPosition.x + deltaXPercent));
+                const newY = Math.max(0, Math.min(100, dragStartPosition.y + deltaYPercent));
+                
+                compositeSystem.updatePositionOnly(newX, newY);
+                // 드래그 중에는 편집 핸들 동기화 하지 않음 (깜빡거림 방지)
             } else if (isEditing) {
                 const deltaX = e.clientX - editStart.x;
                 const deltaY = e.clientY - editStart.y;
@@ -3292,27 +3415,40 @@
             }
         });
 
-        // 터치 이동 이벤트 (최적화)
+        // 터치 이동 이벤트 (최적화, 디바운싱 지원)
         document.addEventListener('touchmove', (e) => {
             // 터치 이벤트가 드래그나 편집 중일 때만 처리
             if (isDragging || isEditing) {
                 e.preventDefault(); // 터치 스크롤 방지
                 e.stopPropagation();
                 
+                // 터치 이동 중에는 디바운싱 타이머 리셋 (드래그가 계속되고 있음을 표시)
+                if (touchEndDebounceTimer) {
+                    clearTimeout(touchEndDebounceTimer);
+                    touchEndDebounceTimer = null;
+                }
+                
                 if (isDragging) {
                     const rect = compositePreview.getBoundingClientRect();
                     const touch = e.touches[0];
-                    const x = touch.clientX - rect.left;
-                    const y = touch.clientY - rect.top;
+                    const currentX = touch.clientX - rect.left;
+                    const currentY = touch.clientY - rect.top;
                     
-                    // 모바일 터치 감도 개선
-                    const sensitivity = 1.2; // 터치 감도 배수
-                    const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100 * sensitivity)));
-                    const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100 * sensitivity)));
+                    // 드래그 시작점과 현재 위치의 차이 계산
+                    const deltaX = currentX - dragStart.x;
+                    const deltaY = currentY - dragStart.y;
+                    
+                    // 퍼센트로 변환 (컨테이너 크기 기준)
+                    const deltaXPercent = (deltaX / rect.width) * 100;
+                    const deltaYPercent = (deltaY / rect.height) * 100;
+                    
+                    // 시작 위치에서 상대적 이동량만큼 이동
+                    const newX = Math.max(0, Math.min(100, dragStartPosition.x + deltaXPercent));
+                    const newY = Math.max(0, Math.min(100, dragStartPosition.y + deltaYPercent));
                     
                     // requestAnimationFrame으로 성능 최적화
                     requestAnimationFrame(() => {
-                        compositeSystem.updatePosition(newX, newY);
+                        compositeSystem.updatePositionOnly(newX, newY);
                     });
                 } else if (isEditing) {
                     const touch = e.touches[0];
@@ -3358,14 +3494,37 @@
         });
 
         document.addEventListener('touchend', () => {
-            isDragging = false;
-            isEditing = false;
-            // 드래그/편집이 끝났을 때 편집 핸들 동기화
-            if (croppedCalligraphy) {
-                setTimeout(() => {
-                    syncEditHandlesWithContent();
-                }, 100);
+            const currentTime = Date.now();
+            
+            // 기존 타이머가 있다면 취소
+            if (touchEndDebounceTimer) {
+                clearTimeout(touchEndDebounceTimer);
             }
+            
+            // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시
+            if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
+                console.log('편집 터치 종료 디바운싱 적용 - 이벤트 무시');
+                return;
+            }
+            
+            lastTouchEndTime = currentTime;
+            
+            // 디바운싱 타이머 설정
+            touchEndDebounceTimer = setTimeout(() => {
+                console.log('편집 터치 종료 디바운싱 완료 - 상태 리셋');
+                
+                isDragging = false;
+                isEditing = false;
+                
+                // 드래그/편집이 끝났을 때 편집 핸들 동기화
+                if (croppedCalligraphy) {
+                    setTimeout(() => {
+                        syncEditHandlesWithContent();
+                    }, 100);
+                }
+                
+                touchEndDebounceTimer = null;
+            }, touchEndDebounceDelay);
         });
         
         // 블렌드 모드 버튼 이벤트
