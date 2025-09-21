@@ -257,14 +257,14 @@
         /* 모바일에서 컴포지트 프리뷰 높이 보정 */
         @media screen and (max-width: 768px) {
             .composite-preview-container {
-                height: calc(100vh - 450px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-                margin-bottom: 50px; /* 하단 여백 더 증가 */
-                padding-bottom: 30px;
+                height: calc(100vh - 500px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                margin-bottom: 60px; /* 하단 여백 더 증가 */
+                padding-bottom: 40px;
             }
             
             @supports (height: 100dvh) {
                 .composite-preview-container {
-                    height: calc(100dvh - 450px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                    height: calc(100dvh - 500px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 }
             }
             
@@ -781,15 +781,17 @@
             <div class="max-w-2xl mx-auto">
                     <div class="control-panel">
                         <h2 class="text-xl mb-4 text-center">1. 배경 사진 업로드</h2>
-                        <div class="file-upload-area" onclick="document.getElementById('backgroundInput').click()">
+                        <div class="file-upload-area" id="backgroundUploadArea" onclick="document.getElementById('backgroundInput').click()">
                             <div class="text-6xl mb-4">🖼️</div>
                             <p class="text-lg  mb-2">배경 사진을 선택하세요</p>
                             <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
                             <input type="file" id="backgroundInput" accept="image/*" style="display: none;">
                         </div>
-                        <div id="backgroundPreview" class="mt-4" style="display: none;">
-                            <img id="backgroundImage" class="image-preview" alt="배경 미리보기">
-                        
+                        <div id="backgroundCheckArea" class="mt-4" style="display: none;">
+                            <div class="text-center">
+                                <div class="text-6xl mb-4 text-green-500">✅</div>
+                                <p class="text-lg text-green-600 font-semibold">배경 사진이 업로드되었습니다</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -2712,12 +2714,12 @@
                 try {
                     const compressed = await compressImage(file);
                     backgroundImage = URL.createObjectURL(compressed);
-                    backgroundImageEl.src = backgroundImage;
                     
-                    // 점선 영역을 사진으로 교체
-                    const uploadArea = document.querySelector('.file-upload-area');
+                    // 업로드 영역을 체크 아이콘으로 교체
+                    const uploadArea = document.getElementById('backgroundUploadArea');
+                    const checkArea = document.getElementById('backgroundCheckArea');
                     uploadArea.style.display = 'none';
-                    backgroundPreview.style.display = 'block';
+                    checkArea.style.display = 'block';
                     
                     // 다음 단계 버튼 표시
                     document.getElementById('nextButtonContainer').style.display = 'block';
@@ -3011,7 +3013,7 @@
                         }
                         touchUpdateTimeout = setTimeout(() => {
                             cropSystem.updateCropHandles();
-                        }, 16); // 60fps에 맞춰 16ms 디바운싱
+                        }, 50); // 50ms 디바운싱으로 안정성 향상
                     } else if (cropSystem.isDragging) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
@@ -3039,7 +3041,7 @@
                         }
                         touchUpdateTimeout = setTimeout(() => {
                             cropSystem.updateCropHandles();
-                        }, 16); // 60fps에 맞춰 16ms 디바운싱
+                        }, 50); // 50ms 디바운싱으로 안정성 향상
                     }
                 }
             }, { passive: false }); // passive: false로 설정하여 preventDefault 가능
@@ -3065,15 +3067,18 @@
             });
 
             // 터치 종료 이벤트
-            document.addEventListener('touchend', () => {
+            document.addEventListener('touchend', (e) => {
                 // 리사이징 또는 드래깅 상태였는지 확인
                 const wasResizing = cropSystem.isResizing;
                 const wasDragging = cropSystem.isDragging;
                 
+                // 상태 완전 리셋
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
-                cropSystem.hasMoved = false; // 상태 완전 리셋
-                cropSystem.minMoveDistance = 0; // 최소 이동 거리 리셋
+                cropSystem.hasMoved = false;
+                cropSystem.minMoveDistance = 0;
+                cropSystem.startPos = null;
+                cropSystem.startCropArea = null;
                 
                 // 디바운싱 타이머 정리
                 if (touchUpdateTimeout) {
@@ -3083,12 +3088,15 @@
                 
                 // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
                 if (wasResizing || wasDragging) {
-                    setTimeout(() => {
-                        cropSystem.updateCropHandles();
-                        console.log('터치 종료 후 크롭 핸들 업데이트 완료');
-                    }, 10);
+                    // 즉시 업데이트 (지연 없음)
+                    cropSystem.updateCropHandles();
+                    console.log('터치 종료 후 크롭 핸들 업데이트 완료');
                 }
-            });
+                
+                // 터치 이벤트 전파 방지
+                e.preventDefault();
+                e.stopPropagation();
+            }, { passive: false });
         }
         
         // 편집 핸들 변수
