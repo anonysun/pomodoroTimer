@@ -22,7 +22,9 @@
             font-family: 'Jua', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
+            height: 100dvh; /* 동적 뷰포트 높이 사용 (모바일 최적화) */
             max-height: 100vh;
+            max-height: 100dvh; /* 동적 뷰포트 높이 사용 */
             overflow: hidden; /* 스크롤 완전 방지 */
             margin: 0;
             padding: 0;
@@ -37,6 +39,29 @@
             /* 터치 스크롤 방지 */
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: none;
+        }
+        
+        /* 모바일 뷰포트 높이 보정 */
+        @supports (height: 100dvh) {
+            body {
+                height: 100dvh;
+                max-height: 100dvh;
+            }
+        }
+        
+        /* iOS Safari 주소창 고려한 높이 계산 */
+        @media screen and (max-width: 768px) {
+            body {
+                height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            }
+            
+            @supports (height: 100dvh) {
+                body {
+                    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                }
+            }
         }
         
         /* 모든 요소에 Jua 폰트 강제 적용 */
@@ -104,6 +129,7 @@
         .step {
             display: none;
             height: 100vh;
+            height: 100dvh; /* 동적 뷰포트 높이 사용 */
             overflow: hidden; /* 스크롤 방지 */
             position: fixed;
             top: 0;
@@ -115,12 +141,26 @@
         .step.active {
             display: block;
             height: 100vh;
+            height: 100dvh; /* 동적 뷰포트 높이 사용 */
             overflow: hidden; /* 스크롤 방지 */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 1;
+        }
+        
+        /* 모바일에서 스텝 높이 보정 */
+        @media screen and (max-width: 768px) {
+            .step, .step.active {
+                height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            }
+            
+            @supports (height: 100dvh) {
+                .step, .step.active {
+                    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                }
+            }
         }
         
         .image-preview {
@@ -195,12 +235,51 @@
             align-items: center !important;
             width: 100% !important;
             height: calc(100vh - 250px); /* 위/아래 버튼 공간 제외하고 최대 높이 */
+            height: calc(100dvh - 250px); /* 동적 뷰포트 높이 사용 */
             padding: 10px;
             box-sizing: border-box;
             text-align: center;
             position: static;
             margin-bottom: 20px;
             overflow: hidden; /* 스크롤 방지 */
+        }
+        
+        /* 모바일에서 컴포지트 프리뷰 높이 보정 */
+        @media screen and (max-width: 768px) {
+            .composite-preview-container {
+                height: calc(100vh - 280px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                margin-bottom: 30px; /* 하단 여백 증가 */
+            }
+            
+            @supports (height: 100dvh) {
+                .composite-preview-container {
+                    height: calc(100dvh - 280px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                }
+            }
+        }
+        
+        /* 모바일 버튼 영역 안전 여백 */
+        @media screen and (max-width: 768px) {
+            .flex.justify-center.space-x-4 {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+                margin-bottom: 20px;
+            }
+            
+            /* 다운로드 버튼 특별 처리 */
+            #downloadBtn {
+                margin-bottom: calc(10px + env(safe-area-inset-bottom));
+            }
+            
+            /* 전체 버튼 컨테이너에 안전 여백 */
+            .step-4 .flex.justify-center.space-x-4 {
+                position: relative;
+                z-index: 10;
+                background: rgba(102, 126, 234, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px 20px 0 0;
+                padding: 20px;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            }
         }
         
         .composite-preview {
@@ -2157,51 +2236,39 @@
             }, 'image/jpeg', 0.9);
         }
         
-        // iOS Safari 갤러리 저장 (자동화 시도)
+        // iOS Safari 갤러리 저장 (개선된 방법)
         function saveToGalleryIOS(blob, fileName) {
             const url = URL.createObjectURL(blob);
             
-            // iOS에서 자동 저장 시도
+            // iOS에서 더 안정적인 저장 방법 사용
             tryAutoSaveIOS(url, fileName);
         }
         
-        // iOS 자동 저장 시도
+        // iOS 자동 저장 시도 (개선된 버전)
         function tryAutoSaveIOS(url, fileName) {
-            let saveAttempted = false;
+            // 방법 1: 새로운 탭에서 이미지 열기 (iOS에서 더 안정적)
+            const newWindow = window.open(url, '_blank');
             
-            // 방법 1: 직접 다운로드 링크 클릭 시도
+            // 방법 2: 사용자 제스처로 직접 다운로드 링크 생성
             const link = document.createElement('a');
             link.href = url;
             link.download = fileName;
             link.style.display = 'none';
             document.body.appendChild(link);
             
-            // 자동 클릭 시도
-            link.click();
-            saveAttempted = true;
-            
-            // iOS에서 다운로드 시작 확인을 위한 이벤트 리스너
-            const checkDownload = () => {
-                // iOS Safari에서 다운로드가 시작되었는지 확인
-                if (saveAttempted) {
-                    // 저장 성공으로 가정하고 성공 모달 표시
-                    showSaveSuccessModal();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                    return;
-                }
-            };
-            
-            // 즉시 저장 시도 확인
-            setTimeout(checkDownload, 500);
-            
-            // 만약 자동 저장이 실패한 경우를 위한 대안
+            // 사용자 제스처로 링크 클릭
             setTimeout(() => {
-                if (saveAttempted) {
-                    // 대안 방법으로 모달 표시
-                    showIOSSaveModal(url, fileName);
+                try {
+                    link.click();
+                } catch (e) {
+                    console.log('자동 클릭 실패, 수동 저장 모달 표시');
                 }
-            }, 1500);
+            }, 100);
+            
+            // iOS 전용 저장 모달 표시 (더 명확한 안내)
+            setTimeout(() => {
+                showIOSSaveModal(url, fileName);
+            }, 500);
         }
         
         // iOS 전용 저장 모달 (더 간편한 저장 방법 제공)
@@ -2232,30 +2299,40 @@
                     text-align: center;
                     overflow-y: auto;
                 ">
-                    <h3 style="margin: 0 0 20px 0; color: #333; font-size: 18px;">이미지 저장</h3>
+                    <h3 style="margin: 0 0 20px 0; color: #333; font-size: 20px; font-weight: bold;">📱 iOS 이미지 저장</h3>
                     <img src="${dataURL}" style="
                         max-width: 100%;
+                        max-height: 300px;
                         height: auto;
-                        border: 2px solid #667eea;
-                        border-radius: 10px;
-                        margin-bottom: 20px;
+                        border: 3px solid #007AFF;
+                        border-radius: 15px;
+                        margin-bottom: 25px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                     ">
-                    <div style="margin: 20px 0;">
+                    <div style="margin: 25px 0;">
                         <button onclick="downloadImageDirectly('${dataURL}', '${fileName}')" style="
-                            background: #007AFF;
+                            background: linear-gradient(135deg, #007AFF, #0056CC);
                             color: white;
                             border: none;
-                            padding: 15px 30px;
-                            border-radius: 10px;
-                            font-size: 16px;
+                            padding: 18px 35px;
+                            border-radius: 12px;
+                            font-size: 17px;
+                            font-weight: bold;
                             cursor: pointer;
-                            margin: 5px;
+                            margin: 8px 0;
                             width: 100%;
-                        ">다시 저장 시도</button>
+                            box-shadow: 0 4px 12px rgba(0,122,255,0.3);
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 저장하기</button>
                     </div>
-                    <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-                        저장이 안되면 이미지를 길게 눌러 "이미지 저장"을 선택하세요
-                    </p>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                        <p style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: bold;">📋 저장 방법:</p>
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px; line-height: 1.5;">
+                            1️⃣ 위의 "저장하기" 버튼을 눌러보세요<br>
+                            2️⃣ 안되면 이미지를 <strong>길게 눌러</strong> "이미지 저장" 선택<br>
+                            3️⃣ 또는 이미지를 길게 눌러 "사진에 저장" 선택
+                        </p>
+                    </div>
                     <button onclick="this.parentElement.parentElement.remove()" style="
                         padding: 12px 24px;
                         background: #667eea;
@@ -2749,7 +2826,7 @@
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
                         // 터치 감도 개선: 더 큰 이동 단위로 계산
-                        const sensitivity = 2.5; // 감도 배수 증가
+                        const sensitivity = 4.0; // 감도 배수 증가 (모바일 최적화)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -2814,7 +2891,7 @@
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
                         // 드래깅 감도도 개선
-                        const sensitivity = 2.5; // 감도 배수 증가
+                        const sensitivity = 4.0; // 감도 배수 증가 (모바일 최적화)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -2995,8 +3072,10 @@
                     const x = touch.clientX - rect.left;
                     const y = touch.clientY - rect.top;
                     
-                    const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100)));
-                    const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100)));
+                    // 모바일 터치 감도 개선
+                    const sensitivity = 1.2; // 터치 감도 배수
+                    const newX = Math.max(0, Math.min(100, ((x / rect.width) * 100 * sensitivity)));
+                    const newY = Math.max(0, Math.min(100, ((y / rect.height) * 100 * sensitivity)));
                     
                     // requestAnimationFrame으로 성능 최적화
                     requestAnimationFrame(() => {
@@ -3067,6 +3146,40 @@
             compositeSystem.updateBlendMode('screen');
             screenMode.classList.add('active');
             multiplyMode.classList.remove('active');
+        });
+        
+        // 모바일 뷰포트 높이 동적 계산 및 적용
+        function updateMobileViewportHeight() {
+            if (window.innerWidth <= 768) {
+                const vh = window.innerHeight * 0.01;
+                const dvh = window.innerHeight * 0.01;
+                
+                // CSS 변수로 동적 뷰포트 높이 설정
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+                document.documentElement.style.setProperty('--dvh', `${dvh}px`);
+                
+                // 안전 영역 고려한 높이 계산
+                const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0');
+                const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0');
+                
+                const adjustedHeight = window.innerHeight - safeAreaTop - safeAreaBottom;
+                document.documentElement.style.setProperty('--adjusted-vh', `${adjustedHeight}px`);
+                
+                console.log('모바일 뷰포트 높이 업데이트:', {
+                    innerHeight: window.innerHeight,
+                    vh: vh,
+                    safeAreaTop,
+                    safeAreaBottom,
+                    adjustedHeight
+                });
+            }
+        }
+        
+        // 초기 로드 시 및 리사이즈 시 뷰포트 높이 업데이트
+        updateMobileViewportHeight();
+        window.addEventListener('resize', updateMobileViewportHeight);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateMobileViewportHeight, 100);
         });
         
         // 버튼 이벤트
