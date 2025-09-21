@@ -789,8 +789,7 @@
                         </div>
                         <div id="backgroundCheckArea" class="mt-4" style="display: none;">
                             <div class="text-center">
-                                <div class="text-6xl mb-4 text-green-500">✅</div>
-                                <p class="text-lg text-green-600 font-semibold">배경 사진이 업로드되었습니다</p>
+                                <div class="text-3xl mb-4 text-green-500">☑️</div>
                             </div>
                         </div>
                     </div>
@@ -3007,13 +3006,8 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 디바운싱을 위한 setTimeout 사용 (즉시 업데이트)
-                        if (touchUpdateTimeout) {
-                            clearTimeout(touchUpdateTimeout);
-                        }
-                        touchUpdateTimeout = setTimeout(() => {
-                            cropSystem.updateCropHandles();
-                        }, 50); // 50ms 디바운싱으로 안정성 향상
+                        // 실시간 업데이트 (디바운싱 제거)
+                        cropSystem.updateCropHandles();
                     } else if (cropSystem.isDragging) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
@@ -3035,13 +3029,8 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 디바운싱을 위한 setTimeout 사용 (즉시 업데이트)
-                        if (touchUpdateTimeout) {
-                            clearTimeout(touchUpdateTimeout);
-                        }
-                        touchUpdateTimeout = setTimeout(() => {
-                            cropSystem.updateCropHandles();
-                        }, 50); // 50ms 디바운싱으로 안정성 향상
+                        // 실시간 업데이트 (디바운싱 제거)
+                        cropSystem.updateCropHandles();
                     }
                 }
             }, { passive: false }); // passive: false로 설정하여 preventDefault 가능
@@ -3080,11 +3069,7 @@
                 cropSystem.startPos = null;
                 cropSystem.startCropArea = null;
                 
-                // 디바운싱 타이머 정리
-                if (touchUpdateTimeout) {
-                    clearTimeout(touchUpdateTimeout);
-                    touchUpdateTimeout = null;
-                }
+                // 디바운싱 타이머 정리 (실시간 업데이트로 변경되어 불필요)
                 
                 // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
                 if (wasResizing || wasDragging) {
