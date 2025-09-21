@@ -257,14 +257,28 @@
         /* 모바일에서 컴포지트 프리뷰 높이 보정 */
         @media screen and (max-width: 768px) {
             .composite-preview-container {
-                height: calc(100vh - 280px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-                margin-bottom: 30px; /* 하단 여백 증가 */
+                height: calc(100vh - 320px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                margin-bottom: 40px; /* 하단 여백 더 증가 */
+                padding-bottom: 20px;
             }
             
             @supports (height: 100dvh) {
                 .composite-preview-container {
-                    height: calc(100dvh - 280px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+                    height: calc(100dvh - 320px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
                 }
+            }
+            
+            /* 미리보기 단계 버튼 영역 안전 여백 */
+            .step-2 .text-center.mt-6,
+            .step-3 .text-center.mt-6 {
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+                margin-bottom: 20px;
+            }
+            
+            /* 미리보기 단계 버튼 */
+            .step-2 button,
+            .step-3 button {
+                margin-bottom: calc(10px + env(safe-area-inset-bottom));
             }
         }
         
@@ -1310,8 +1324,8 @@
                     handle.remove();
                 });
                 
-                // 잠시 대기 후 새 핸들 생성 (DOM 업데이트 완료 대기)
-                setTimeout(() => {
+                // 부드러운 핸들 업데이트를 위한 requestAnimationFrame 사용
+                requestAnimationFrame(() => {
                     console.log('새 핸들 생성 시작');
                     
                     // 8개 핸들 동적 생성
@@ -1382,7 +1396,7 @@
                     });
                     
                     console.log('핸들 위치 설정 완료');
-                }, 10);
+                });
             }
             
             // 핸들 이벤트 설정 (마우스 + 터치)
@@ -2940,8 +2954,8 @@
                             console.log('최소 이동 거리 달성 - 리사이징 시작');
                         }
                         
-                        // 터치 감도 개선: 모바일 최적화
-                        const sensitivity = 3.0; // 모바일에서 더 높은 감도
+                        // 터치 감도 개선: 자연스러운 반응
+                        const sensitivity = 1.5; // 감도 조정 (자연스러운 움직임)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -2995,13 +3009,13 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 디바운싱으로 성능 최적화
+                        // 부드러운 업데이트를 위한 requestAnimationFrame 사용
                         if (touchUpdateTimeout) {
-                            clearTimeout(touchUpdateTimeout);
+                            cancelAnimationFrame(touchUpdateTimeout);
                         }
-                        touchUpdateTimeout = setTimeout(() => {
+                        touchUpdateTimeout = requestAnimationFrame(() => {
                             cropSystem.updateCropHandles();
-                        }, 16); // 60fps에 맞춰 16ms 간격
+                        });
                     } else if (cropSystem.isDragging) {
                         const displayBounds = cropSystem.getImageDisplayBounds(img);
                         const touch = e.touches[0];
@@ -3021,8 +3035,8 @@
                             console.log('최소 이동 거리 달성 - 드래그 시작');
                         }
                         
-                        // 드래깅 감도도 개선 (모바일 최적화)
-                        const sensitivity = 3.0; // 모바일에서 더 높은 감도
+                        // 드래깅 감도도 개선 (자연스러운 반응)
+                        const sensitivity = 1.5; // 감도 조정 (자연스러운 움직임)
                         const deltaX = ((touch.clientX - cropSystem.startPos.x) / displayBounds.width) * 100 * sensitivity;
                         const deltaY = ((touch.clientY - cropSystem.startPos.y) / displayBounds.height) * 100 * sensitivity;
                         
@@ -3032,13 +3046,13 @@
                         
                         cropSystem.cropArea = newCropArea;
                         
-                        // 디바운싱으로 성능 최적화
+                        // 부드러운 업데이트를 위한 requestAnimationFrame 사용
                         if (touchUpdateTimeout) {
-                            clearTimeout(touchUpdateTimeout);
+                            cancelAnimationFrame(touchUpdateTimeout);
                         }
-                        touchUpdateTimeout = setTimeout(() => {
+                        touchUpdateTimeout = requestAnimationFrame(() => {
                             cropSystem.updateCropHandles();
-                        }, 16); // 60fps에 맞춰 16ms 간격
+                        });
                     }
                 }
             }, { passive: false }); // passive: false로 설정하여 preventDefault 가능
@@ -3070,9 +3084,9 @@
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
                 
-                // 디바운싱 정리
+                // 애니메이션 프레임 정리
                 if (touchUpdateTimeout) {
-                    clearTimeout(touchUpdateTimeout);
+                    cancelAnimationFrame(touchUpdateTimeout);
                     touchUpdateTimeout = null;
                 }
                 
