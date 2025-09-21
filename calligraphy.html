@@ -1234,9 +1234,12 @@
             }
 
             // 크롭 핸들 업데이트
-            updateCropHandles() {
+            updateCropHandles(cropAreaEl = null) {
                 const img = document.getElementById('processedCalligraphy');
-                const cropAreaEl = document.getElementById('cropArea');
+                if (!cropAreaEl) {
+                    cropAreaEl = document.getElementById('cropArea');
+                }
+                
                 if (!img || !cropAreaEl) {
                     console.log('이미지 또는 크롭 영역 요소를 찾을 수 없음');
                     return;
@@ -1280,79 +1283,94 @@
                 cropAreaEl.style.width = width + 'px';
                 cropAreaEl.style.height = height + 'px';
                 
-                // 핸들 위치 업데이트
+                // 핸들 위치 업데이트 (기존 핸들 완전 제거 후 새로 생성)
                 this.updateHandles(cropAreaEl);
             }
 
             // 핸들 위치 업데이트 (크롭 사각형에 정확히 붙이기)
             updateHandles(cropAreaEl) {
-                // 기존 핸들 제거
+                console.log('핸들 업데이트 시작 - 기존 핸들 제거');
+                
+                // 기존 핸들 완전 제거
                 const existingHandles = cropAreaEl.querySelectorAll('.crop-handle');
-                existingHandles.forEach(handle => handle.remove());
-                
-                // 8개 핸들 동적 생성
-                const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
-                directions.forEach(direction => {
-                    const handle = document.createElement('div');
-                    handle.className = `crop-handle ${direction}`;
-                    handle.dataset.direction = direction;
-                    cropAreaEl.appendChild(handle);
+                console.log(`제거할 핸들 개수: ${existingHandles.length}`);
+                existingHandles.forEach(handle => {
+                    handle.remove();
                 });
                 
-                // 핸들 위치 설정
-                const handles = cropAreaEl.querySelectorAll('.crop-handle');
-                handles.forEach(handle => {
-                    const direction = handle.dataset.direction;
+                // 잠시 대기 후 새 핸들 생성 (DOM 업데이트 완료 대기)
+                setTimeout(() => {
+                    console.log('새 핸들 생성 시작');
                     
-                    // 모든 핸들의 기본 스타일 초기화
-                    handle.style.left = 'auto';
-                    handle.style.right = 'auto';
-                    handle.style.top = 'auto';
-                    handle.style.bottom = 'auto';
-                    handle.style.transform = 'none';
+                    // 8개 핸들 동적 생성
+                    const directions = ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'];
+                    directions.forEach(direction => {
+                        const handle = document.createElement('div');
+                        handle.className = `crop-handle ${direction}`;
+                        handle.dataset.direction = direction;
+                        cropAreaEl.appendChild(handle);
+                    });
                     
-                    switch(direction) {
-                        case 'nw':
-                            handle.style.left = '-10px';
-                            handle.style.top = '-10px';
-                            break;
-                        case 'ne':
-                            handle.style.right = '-10px';
-                            handle.style.top = '-10px';
-                            break;
-                        case 'sw':
-                            handle.style.left = '-10px';
-                            handle.style.bottom = '-10px';
-                            break;
-                        case 'se':
-                            handle.style.right = '-10px';
-                            handle.style.bottom = '-10px';
-                            break;
-                        case 'n':
-                            handle.style.left = '50%';
-                            handle.style.top = '-10px';
-                            handle.style.transform = 'translateX(-50%)';
-                            break;
-                        case 's':
-                            handle.style.left = '50%';
-                            handle.style.bottom = '-10px';
-                            handle.style.transform = 'translateX(-50%)';
-                            break;
-                        case 'w':
-                            handle.style.left = '-10px';
-                            handle.style.top = '50%';
-                            handle.style.transform = 'translateY(-50%)';
-                            break;
-                        case 'e':
-                            handle.style.right = '-10px';
-                            handle.style.top = '50%';
-                            handle.style.transform = 'translateY(-50%)';
-                            break;
-                    }
-                });
-                
-                // 핸들 이벤트 설정
-                this.setupHandleEvents(handles);
+                    console.log('새 핸들 생성 완료');
+                    
+                    // 새로 생성된 핸들에 이벤트 리스너 추가
+                    this.setupHandleEvents(cropAreaEl);
+                    
+                    // 새로 생성된 핸들 위치 설정
+                    const newHandles = cropAreaEl.querySelectorAll('.crop-handle');
+                    console.log(`새로 생성된 핸들 개수: ${newHandles.length}`);
+                    newHandles.forEach(handle => {
+                        const direction = handle.dataset.direction;
+                        
+                        // 모든 핸들의 기본 스타일 초기화
+                        handle.style.left = 'auto';
+                        handle.style.right = 'auto';
+                        handle.style.top = 'auto';
+                        handle.style.bottom = 'auto';
+                        handle.style.transform = 'none';
+                        
+                        switch(direction) {
+                            case 'nw':
+                                handle.style.left = '-10px';
+                                handle.style.top = '-10px';
+                                break;
+                            case 'ne':
+                                handle.style.right = '-10px';
+                                handle.style.top = '-10px';
+                                break;
+                            case 'sw':
+                                handle.style.left = '-10px';
+                                handle.style.bottom = '-10px';
+                                break;
+                            case 'se':
+                                handle.style.right = '-10px';
+                                handle.style.bottom = '-10px';
+                                break;
+                            case 'n':
+                                handle.style.left = '50%';
+                                handle.style.top = '-10px';
+                                handle.style.transform = 'translateX(-50%)';
+                                break;
+                            case 's':
+                                handle.style.left = '50%';
+                                handle.style.bottom = '-10px';
+                                handle.style.transform = 'translateX(-50%)';
+                                break;
+                            case 'w':
+                                handle.style.left = '-10px';
+                                handle.style.top = '50%';
+                                handle.style.transform = 'translateY(-50%)';
+                                break;
+                            case 'e':
+                                handle.style.right = '-10px';
+                                handle.style.top = '50%';
+                                handle.style.transform = 'translateY(-50%)';
+                                break;
+                        }
+                    });
+                    
+                    console.log('핸들 위치 설정 완료');
+                }, 10);
             }
             
             // 핸들 이벤트 설정 (마우스 + 터치)
@@ -2246,29 +2264,10 @@
         
         // iOS 자동 저장 시도 (개선된 버전)
         function tryAutoSaveIOS(url, fileName) {
-            // 방법 1: 새로운 탭에서 이미지 열기 (iOS에서 더 안정적)
-            const newWindow = window.open(url, '_blank');
+            console.log('iOS 저장 시도 시작');
             
-            // 방법 2: 사용자 제스처로 직접 다운로드 링크 생성
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            link.style.display = 'none';
-            document.body.appendChild(link);
-            
-            // 사용자 제스처로 링크 클릭
-            setTimeout(() => {
-                try {
-                    link.click();
-                } catch (e) {
-                    console.log('자동 클릭 실패, 수동 저장 모달 표시');
-                }
-            }, 100);
-            
-            // iOS 전용 저장 모달 표시 (더 명확한 안내)
-            setTimeout(() => {
-                showIOSSaveModal(url, fileName);
-            }, 500);
+            // iOS에서는 자동 저장이 제한적이므로 즉시 수동 저장 모달 표시
+            showIOSSaveModal(url, fileName);
         }
         
         // iOS 전용 저장 모달 (더 간편한 저장 방법 제공)
@@ -2325,12 +2324,13 @@
                             transition: all 0.2s ease;
                         " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">💾 저장하기</button>
                     </div>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <p style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: bold;">📋 저장 방법:</p>
-                        <p style="margin: 0 0 10px 0; color: #666; font-size: 14px; line-height: 1.5;">
-                            1️⃣ 위의 "저장하기" 버튼을 눌러보세요<br>
-                            2️⃣ 안되면 이미지를 <strong>길게 눌러</strong> "이미지 저장" 선택<br>
-                            3️⃣ 또는 이미지를 길게 눌러 "사진에 저장" 선택
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                        <p style="margin: 0 0 15px 0; color: #856404; font-size: 16px; font-weight: bold;">⚠️ iOS 저장 안내:</p>
+                        <p style="margin: 0 0 10px 0; color: #856404; font-size: 14px; line-height: 1.5;">
+                            <strong>위 버튼이 작동하지 않으면:</strong><br>
+                            1️⃣ 이미지를 <strong>길게 누르세요</strong><br>
+                            2️⃣ "이미지 저장" 또는 "사진에 저장" 선택<br>
+                            3️⃣ 또는 "공유" 버튼으로 갤러리에 저장
                         </p>
                     </div>
                     <button onclick="this.parentElement.parentElement.remove()" style="
@@ -2357,19 +2357,83 @@
         
         // 직접 이미지 다운로드 함수 (전역에서 접근 가능하도록)
         window.downloadImageDirectly = function(dataURL, fileName) {
+            console.log('직접 다운로드 시도:', fileName);
+            
             const link = document.createElement('a');
             link.href = dataURL;
             link.download = fileName;
             link.style.display = 'none';
             document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
             
-            // 저장 성공 모달 표시
-            setTimeout(() => {
-                showSaveSuccessModal();
-            }, 500);
+            try {
+                link.click();
+                console.log('다운로드 링크 클릭 완료');
+                
+                // iOS에서는 실제 저장 여부를 확인할 수 없으므로 안내 메시지만 표시
+                setTimeout(() => {
+                    showIOSDownloadCompleteModal();
+                }, 500);
+            } catch (error) {
+                console.error('다운로드 실패:', error);
+                showSaveErrorModal();
+            }
+            
+            document.body.removeChild(link);
         };
+        
+        // iOS 다운로드 완료 안내 모달
+        function showIOSDownloadCompleteModal() {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.8);
+                z-index: 10000;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 20px;
+                box-sizing: border-box;
+            `;
+            
+            modal.innerHTML = `
+                <div style="
+                    background: white;
+                    border-radius: 15px;
+                    padding: 30px;
+                    max-width: 90%;
+                    text-align: center;
+                ">
+                    <div style="font-size: 48px; margin-bottom: 20px;">📱</div>
+                    <h3 style="margin: 0 0 20px 0; color: #333; font-size: 18px;">다운로드 시도 완료</h3>
+                    <p style="margin: 0 0 20px 0; color: #666; font-size: 14px; line-height: 1.5;">
+                        다운로드를 시도했습니다.<br>
+                        <strong>만약 저장이 안 되었다면</strong> 이미지를 길게 눌러서 "이미지 저장"을 선택해주세요.
+                    </p>
+                    <button onclick="this.parentElement.parentElement.remove()" style="
+                        padding: 12px 24px;
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        cursor: pointer;
+                    ">확인</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 모달 외부 클릭 시 닫기
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
         
         // Android Chrome 갤러리 저장
         function saveToGalleryAndroid(blob, fileName) {
@@ -2408,7 +2472,10 @@
             
             try {
                 link.click();
-                showSaveSuccessModal();
+                // 일반 브라우저에서는 성공 모달 표시
+                setTimeout(() => {
+                    showSaveSuccessModal();
+                }, 500);
             } catch (error) {
                 console.log('일반 다운로드 실패:', error);
                 showSaveModal(url, fileName);
@@ -2914,18 +2981,43 @@
             
             // 마우스 업 이벤트
             document.addEventListener('mouseup', () => {
+                // 리사이징 또는 드래깅 상태였는지 확인
+                const wasResizing = cropSystem.isResizing;
+                const wasDragging = cropSystem.isDragging;
+                
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
+                
+                // 마우스 종료 시점에서 크롭 핸들 즉시 업데이트
+                if (wasResizing || wasDragging) {
+                    setTimeout(() => {
+                        cropSystem.updateCropHandles();
+                        console.log('마우스 종료 후 크롭 핸들 업데이트 완료');
+                    }, 10);
+                }
             });
 
             // 터치 종료 이벤트
             document.addEventListener('touchend', () => {
+                // 리사이징 또는 드래깅 상태였는지 확인
+                const wasResizing = cropSystem.isResizing;
+                const wasDragging = cropSystem.isDragging;
+                
                 cropSystem.isResizing = false;
                 cropSystem.isDragging = false;
+                
                 // 디바운싱 정리
                 if (touchUpdateTimeout) {
                     clearTimeout(touchUpdateTimeout);
                     touchUpdateTimeout = null;
+                }
+                
+                // 터치 종료 시점에서 크롭 핸들 즉시 업데이트
+                if (wasResizing || wasDragging) {
+                    setTimeout(() => {
+                        cropSystem.updateCropHandles();
+                        console.log('터치 종료 후 크롭 핸들 업데이트 완료');
+                    }, 10);
                 }
             });
         }
