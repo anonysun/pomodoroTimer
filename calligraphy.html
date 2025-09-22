@@ -802,7 +802,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v0.12</span>
+                <span class="text-sm text-gray-300">v0.13</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -2341,13 +2341,24 @@
                         calligraphyOverlay.style.height = dragStartSize.height;
                     }
                     
-                    // 편집 핸들도 동일하게 업데이트
+                    // 편집 핸들도 동일하게 업데이트 (드래그 중에도 유지)
                     if (editHandles) {
                         editHandles.style.left = calligraphyOverlay.style.left;
                         editHandles.style.top = calligraphyOverlay.style.top;
                         editHandles.style.transform = calligraphyOverlay.style.transform;
                         editHandles.style.width = calligraphyOverlay.style.width;
                         editHandles.style.height = calligraphyOverlay.style.height;
+                        
+                        // 드래그 중에도 편집 핸들 강제 표시 (v2.1.0 개선)
+                        editHandles.style.display = 'block';
+                        editHandles.style.opacity = '1';
+                        editHandles.style.visibility = 'visible';
+                        editHandles.style.pointerEvents = 'auto';
+                        
+                        console.log('드래그 중 편집 핸들 유지:', {
+                            position: { x: this.position.x, y: this.position.y },
+                            handlesVisible: true
+                        });
                     }
                     
                     console.log('위치만 업데이트, 크기 유지:', {
@@ -3378,14 +3389,24 @@
                     y: compositeSystem.position.y
                 };
                 
-                // 현재 크기 저장
+                // 현재 크기 저장 및 편집 핸들 강제 표시
                 const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                const editHandles = document.getElementById('editHandles');
                 if (calligraphyOverlay) {
                     dragStartSize = {
                         width: calligraphyOverlay.style.width || '100%',
                         height: calligraphyOverlay.style.height || '100%'
                     };
                     console.log('드래그 시작 시점 크기 저장:', dragStartSize);
+                    
+                    // 드래그 시작 시점에 편집 핸들 강제 표시 (v2.1.0 개선)
+                    if (editHandles) {
+                        editHandles.style.display = 'block';
+                        editHandles.style.opacity = '1';
+                        editHandles.style.visibility = 'visible';
+                        editHandles.style.pointerEvents = 'auto';
+                        console.log('드래그 시작 - 편집 핸들 강제 표시');
+                    }
                 }
                 e.preventDefault();
             }
@@ -3408,14 +3429,24 @@
                     y: compositeSystem.position.y
                 };
                 
-                // 현재 크기 저장
+                // 현재 크기 저장 및 편집 핸들 강제 표시
                 const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                const editHandles = document.getElementById('editHandles');
                 if (calligraphyOverlay) {
                     dragStartSize = {
                         width: calligraphyOverlay.style.width || '100%',
                         height: calligraphyOverlay.style.height || '100%'
                     };
                     console.log('터치 드래그 시작 시점 크기 저장:', dragStartSize);
+                    
+                    // 터치 드래그 시작 시점에 편집 핸들 강제 표시 (v2.1.0 개선)
+                    if (editHandles) {
+                        editHandles.style.display = 'block';
+                        editHandles.style.opacity = '1';
+                        editHandles.style.visibility = 'visible';
+                        editHandles.style.pointerEvents = 'auto';
+                        console.log('터치 드래그 시작 - 편집 핸들 강제 표시');
+                    }
                 }
                 e.preventDefault();
                 e.stopPropagation();
