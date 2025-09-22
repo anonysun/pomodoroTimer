@@ -1171,10 +1171,10 @@
             }
         }
         
-        // 새로운 정확한 이미지 크롭 시스템
+        // 새로운 정확한 이미지 크롭 시스템 (v2.1.0 개선)
         class PreciseCropSystem {
             constructor() {
-                this.cropArea = { x: 10, y: 10, width: 80, height: 80 };
+                this.cropArea = { x: 20, y: 20, width: 60, height: 60 }; // 더 작은 초기 크롭 영역
                 this.isDragging = false;
                 this.isResizing = false;
                 this.resizeHandle = null;
@@ -2909,10 +2909,9 @@
         let startMousePos = { x: 0, y: 0 };
         let startCropArea = { x: 0, y: 0, width: 100, height: 100 };
         
-        // 크롭 영역 초기화 (새로운 시스템 사용)
+        // 크롭 영역 초기화 (새로운 시스템 사용, v2.1.0 개선)
         function initCropArea() {
             console.log('크롭 영역 초기화 시작');
-            cropSystem.cropArea = { x: 10, y: 10, width: 80, height: 80 };
             
             // 이미지가 로드된 후 크롭 핸들 업데이트
             setTimeout(() => {
@@ -2921,6 +2920,36 @@
                 console.log('크롭 영역 요소 확인:', { cropAreaEl, img });
                 
                 if (cropAreaEl && img) {
+                    // 이미지 크기에 따른 동적 크롭 영역 설정 (v2.1.0 개선)
+                    const imgWidth = img.naturalWidth;
+                    const imgHeight = img.naturalHeight;
+                    const imgSize = Math.max(imgWidth, imgHeight);
+                    
+                    let initialCropSize;
+                    if (imgSize > 2000) {
+                        initialCropSize = 40; // 매우 큰 이미지: 40%
+                    } else if (imgSize > 1000) {
+                        initialCropSize = 50; // 큰 이미지: 50%
+                    } else if (imgSize > 500) {
+                        initialCropSize = 60; // 중간 이미지: 60%
+                    } else {
+                        initialCropSize = 70; // 작은 이미지: 70%
+                    }
+                    
+                    const cropOffset = (100 - initialCropSize) / 2;
+                    cropSystem.cropArea = { 
+                        x: cropOffset, 
+                        y: cropOffset, 
+                        width: initialCropSize, 
+                        height: initialCropSize 
+                    };
+                    
+                    console.log('동적 크롭 영역 설정:', {
+                        imageSize: { width: imgWidth, height: imgHeight, max: imgSize },
+                        cropSize: initialCropSize,
+                        cropArea: cropSystem.cropArea
+                    });
+                    
                     console.log('크롭 핸들 업데이트 시작');
                     cropSystem.updateCropHandles(cropAreaEl);
                     
@@ -3034,38 +3063,38 @@
                         case 'nw': // 왼쪽 위
                             newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
                             newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width - deltaX); // 최소 크기 2%로 감소
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height - deltaY); // 최소 크기 2%로 감소
                             break;
                         case 'ne': // 오른쪽 위
                             newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width + deltaX); // 최소 크기 2%로 감소
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height - deltaY); // 최소 크기 2%로 감소
                             break;
                         case 'sw': // 왼쪽 아래
                             newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width - deltaX); // 최소 크기 2%로 감소
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height + deltaY); // 최소 크기 2%로 감소
                             // 좌하단 점 고정 (y 위치 변경하지 않음)
                             break;
                         case 'se': // 오른쪽 아래
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width + deltaX); // 최소 크기 2%로 감소
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height + deltaY); // 최소 크기 2%로 감소
                             // 우하단 점 고정 (x, y 위치 변경하지 않음)
                             break;
                         case 'n': // 위
                             newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height - deltaY);
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height - deltaY); // 최소 크기 2%로 감소
                             break;
                         case 's': // 아래
-                            newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            newCropArea.height = Math.max(2, cropSystem.startCropArea.height + deltaY); // 최소 크기 2%로 감소
                             break;
                         case 'w': // 왼쪽
                             newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width - deltaX); // 최소 크기 2%로 감소
                             break;
                         case 'e': // 오른쪽
-                            newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
+                            newCropArea.width = Math.max(2, cropSystem.startCropArea.width + deltaX); // 최소 크기 2%로 감소
                             break;
                     }
                     
