@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>캘리그라피 합성기</title>
+    <title>캘리그라피 합성기 v2.1.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -802,7 +802,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v0.1</span>
+                <span class="text-sm text-gray-300">v0.11</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -937,10 +937,10 @@
                         
                         
                         <div class="text-center mt-6 space-x-4">
-                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">
+                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px; font-weight: 600;">
                                 다시 시작
                             </button>
-                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto;">
+                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px; font-weight: 600;">
                                 다운로드
                             </button>
                         </div>
@@ -984,13 +984,16 @@
         let currentScale = 0.3; // 배경의 30% 크기로 시작 (더 작게)
         let currentRotation = 0;
         
-        // 터치 디바운싱을 위한 변수들
+        // 터치 디바운싱을 위한 변수들 (v2.1.0 강화)
         let touchEndDebounceTimer = null;
-        let touchEndDebounceDelay = 300; // 300ms 디바운싱 (모바일 안정성 향상)
+        let touchEndDebounceDelay = 600; // 600ms 디바운싱 (더욱 강력한 안정성)
         let lastTouchEndTime = 0;
+        let touchMoveCount = 0; // 터치 이동 횟수 추적
+        let consecutiveTouchEnds = 0; // 연속 터치 종료 횟수 추적
         
         // 드래그 시작점 저장 (상대적 이동을 위해)
         let dragStartPosition = { x: 0, y: 0 };
+        let dragStartSize = { width: '', height: '' }; // 드래그 시작 시점의 크기 저장
         let currentBlendMode = 'multiply';
         // cropArea는 이제 cropSystem.cropArea로 관리됨
         
@@ -2314,16 +2317,33 @@
                 
                 if (calligraphyOverlay) {
                     const transform = `translate(-50%, -50%) scale(${this.scale}) rotate(${this.rotation}deg)`;
+                    
+                    // 위치만 업데이트
                     calligraphyOverlay.style.left = `${this.position.x}%`;
                     calligraphyOverlay.style.top = `${this.position.y}%`;
                     calligraphyOverlay.style.transform = transform;
+                    
+                    // 드래그 시작 시점의 크기 강제 유지 (근본적 해결)
+                    if (dragStartSize.width) {
+                        calligraphyOverlay.style.width = dragStartSize.width;
+                    }
+                    if (dragStartSize.height) {
+                        calligraphyOverlay.style.height = dragStartSize.height;
+                    }
                     
                     // 편집 핸들도 동일하게 업데이트
                     if (editHandles) {
                         editHandles.style.left = calligraphyOverlay.style.left;
                         editHandles.style.top = calligraphyOverlay.style.top;
                         editHandles.style.transform = calligraphyOverlay.style.transform;
+                        editHandles.style.width = calligraphyOverlay.style.width;
+                        editHandles.style.height = calligraphyOverlay.style.height;
                     }
+                    
+                    console.log('위치만 업데이트, 크기 유지:', {
+                        position: { x: this.position.x, y: this.position.y },
+                        size: { width: dragStartSize.width, height: dragStartSize.height }
+                    });
                 }
             }
 
@@ -2333,15 +2353,26 @@
                 this.updatePreview();
                 this.updateEditHandles();
                 
-                // 크기 조절 후 편집 핸들 강제 표시
+                // 크기 조절 후 편집 핸들 강제 표시 및 영역 유지
                 setTimeout(() => {
                     const editHandles = document.getElementById('editHandles');
-                    if (editHandles) {
+                    const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                    
+                    if (editHandles && calligraphyOverlay) {
+                        // 편집 핸들 강제 표시
                         editHandles.style.display = 'block';
                         editHandles.style.opacity = '1';
                         editHandles.style.visibility = 'visible';
                         editHandles.style.pointerEvents = 'auto';
-                        console.log('크기 조절 후 편집 핸들 강제 표시');
+                        
+                        // 편집 핸들 영역을 calligraphyOverlay와 동일하게 강제 설정
+                        editHandles.style.left = calligraphyOverlay.style.left;
+                        editHandles.style.top = calligraphyOverlay.style.top;
+                        editHandles.style.width = calligraphyOverlay.style.width;
+                        editHandles.style.height = calligraphyOverlay.style.height;
+                        editHandles.style.transform = calligraphyOverlay.style.transform;
+                        
+                        console.log('크기 조절 후 편집 핸들 강제 표시 및 영역 유지');
                     }
                 }, 100);
             }
@@ -3199,9 +3230,10 @@
                     clearTimeout(touchEndDebounceTimer);
                 }
                 
-                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시
+                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시 (v2.1.0 강화)
+                consecutiveTouchEnds++;
                 if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
-                    console.log('터치 종료 디바운싱 적용 - 이벤트 무시');
+                    console.log(`터치 종료 디바운싱 적용 - 이벤트 무시 (연속 ${consecutiveTouchEnds}회)`);
                     e.preventDefault();
                     e.stopPropagation();
                     return;
@@ -3209,9 +3241,10 @@
                 
                 lastTouchEndTime = currentTime;
                 
-                // 디바운싱 타이머 설정
+                // 디바운싱 타이머 설정 (v2.1.0 강화)
+                const dynamicDelay = consecutiveTouchEnds > 3 ? touchEndDebounceDelay + 300 : touchEndDebounceDelay;
                 touchEndDebounceTimer = setTimeout(() => {
-                    console.log('터치 종료 디바운싱 완료 - 상태 리셋');
+                    console.log(`터치 종료 디바운싱 완료 - 상태 리셋 (연속 ${consecutiveTouchEnds}회 처리)`);
                     
                     // 상태 완전 리셋
                     cropSystem.isResizing = false;
@@ -3220,6 +3253,7 @@
                     cropSystem.minMoveDistance = 0;
                     cropSystem.startPos = null;
                     cropSystem.startCropArea = null;
+                    consecutiveTouchEnds = 0; // 연속 터치 종료 횟수 리셋
                     
                     // 터치 종료 시점에서 크롭 핸들 업데이트
                     if (wasResizing || wasDragging) {
@@ -3228,7 +3262,7 @@
                     }
                     
                     touchEndDebounceTimer = null;
-                }, touchEndDebounceDelay);
+                }, dynamicDelay);
                 
                 // 터치 이벤트 전파 방지
                 e.preventDefault();
@@ -3248,9 +3282,10 @@
                     clearTimeout(touchEndDebounceTimer);
                 }
                 
-                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 취소 이벤트를 무시
+                // 디바운싱 적용: 짧은 시간 내에 연속된 터치 취소 이벤트를 무시 (v2.1.0 강화)
+                consecutiveTouchEnds++;
                 if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
-                    console.log('터치 취소 디바운싱 적용 - 이벤트 무시');
+                    console.log(`터치 취소 디바운싱 적용 - 이벤트 무시 (연속 ${consecutiveTouchEnds}회)`);
                     e.preventDefault();
                     e.stopPropagation();
                     return;
@@ -3258,9 +3293,10 @@
                 
                 lastTouchEndTime = currentTime;
                 
-                // 디바운싱 타이머 설정
+                // 디바운싱 타이머 설정 (v2.1.0 강화)
+                const dynamicDelay = consecutiveTouchEnds > 3 ? touchEndDebounceDelay + 300 : touchEndDebounceDelay;
                 touchEndDebounceTimer = setTimeout(() => {
-                    console.log('터치 취소 디바운싱 완료 - 상태 리셋');
+                    console.log(`터치 취소 디바운싱 완료 - 상태 리셋 (연속 ${consecutiveTouchEnds}회 처리)`);
                     
                     // 상태 완전 리셋
                     cropSystem.isResizing = false;
@@ -3269,12 +3305,13 @@
                     cropSystem.minMoveDistance = 0;
                     cropSystem.startPos = null;
                     cropSystem.startCropArea = null;
+                    consecutiveTouchEnds = 0; // 연속 터치 종료 횟수 리셋
                     
                     // 크롭 핸들 업데이트
                     cropSystem.updateCropHandles();
                     
                     touchEndDebounceTimer = null;
-                }, touchEndDebounceDelay);
+                }, dynamicDelay);
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -3296,11 +3333,21 @@
                     x: e.clientX - rect.left,
                     y: e.clientY - rect.top
                 };
-                // 드래그 시작 시점의 글씨 위치 저장 (상대적 이동을 위해)
+                // 드래그 시작 시점의 글씨 위치와 크기 저장 (상대적 이동을 위해)
                 dragStartPosition = {
                     x: compositeSystem.position.x,
                     y: compositeSystem.position.y
                 };
+                
+                // 현재 크기 저장
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                if (calligraphyOverlay) {
+                    dragStartSize = {
+                        width: calligraphyOverlay.style.width || '100%',
+                        height: calligraphyOverlay.style.height || '100%'
+                    };
+                    console.log('드래그 시작 시점 크기 저장:', dragStartSize);
+                }
                 e.preventDefault();
             }
         });
@@ -3316,11 +3363,21 @@
                     x: touch.clientX - rect.left,
                     y: touch.clientY - rect.top
                 };
-                // 드래그 시작 시점의 글씨 위치 저장 (상대적 이동을 위해)
+                // 드래그 시작 시점의 글씨 위치와 크기 저장 (상대적 이동을 위해)
                 dragStartPosition = {
                     x: compositeSystem.position.x,
                     y: compositeSystem.position.y
                 };
+                
+                // 현재 크기 저장
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                if (calligraphyOverlay) {
+                    dragStartSize = {
+                        width: calligraphyOverlay.style.width || '100%',
+                        height: calligraphyOverlay.style.height || '100%'
+                    };
+                    console.log('터치 드래그 시작 시점 크기 저장:', dragStartSize);
+                }
                 e.preventDefault();
                 e.stopPropagation();
             }
@@ -3442,6 +3499,9 @@
                     touchEndDebounceTimer = null;
                 }
                 
+                // 터치 이동 횟수 증가
+                touchMoveCount++;
+                
                 if (isDragging) {
                     const rect = compositePreview.getBoundingClientRect();
                     const touch = e.touches[0];
@@ -3515,20 +3575,31 @@
                 clearTimeout(touchEndDebounceTimer);
             }
             
-            // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시
+            // 디바운싱 적용: 짧은 시간 내에 연속된 터치 종료 이벤트를 무시 (v2.1.0 강화)
+            consecutiveTouchEnds++;
             if (currentTime - lastTouchEndTime < touchEndDebounceDelay) {
-                console.log('편집 터치 종료 디바운싱 적용 - 이벤트 무시');
+                console.log(`편집 터치 종료 디바운싱 적용 - 이벤트 무시 (연속 ${consecutiveTouchEnds}회)`);
                 return;
             }
             
             lastTouchEndTime = currentTime;
             
-            // 디바운싱 타이머 설정
+            // 디바운싱 타이머 설정 (v2.1.0 강화 - 터치 이동 횟수와 연속 종료 횟수 모두 고려)
+            const moveDelay = touchMoveCount > 5 ? 200 : 0;
+            const consecutiveDelay = consecutiveTouchEnds > 3 ? 300 : 0;
+            const dynamicDelay = touchEndDebounceDelay + moveDelay + consecutiveDelay;
+            
             touchEndDebounceTimer = setTimeout(() => {
-                console.log('편집 터치 종료 디바운싱 완료 - 상태 리셋');
+                console.log('편집 터치 종료 디바운싱 완료 - 상태 리셋', { 
+                    touchMoveCount, 
+                    consecutiveTouchEnds, 
+                    dynamicDelay 
+                });
                 
                 isDragging = false;
                 isEditing = false;
+                touchMoveCount = 0; // 터치 이동 횟수 리셋
+                consecutiveTouchEnds = 0; // 연속 터치 종료 횟수 리셋
                 
                 // 드래그/편집이 끝났을 때 편집 핸들 동기화
                 if (croppedCalligraphy) {
@@ -3538,7 +3609,7 @@
                 }
                 
                 touchEndDebounceTimer = null;
-            }, touchEndDebounceDelay);
+            }, dynamicDelay);
         });
         
         // 블렌드 모드 버튼 이벤트
@@ -3678,10 +3749,19 @@
         // 다운로드 버튼 이벤트 (강화된 처리)
         const downloadBtn = document.getElementById('downloadBtn');
         if (downloadBtn) {
+            // 클릭 이벤트
             downloadBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('다운로드 버튼 클릭됨');
+                downloadFinalImage();
+            });
+            
+            // 터치 이벤트 (모바일 대응)
+            downloadBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('다운로드 버튼 터치됨');
                 downloadFinalImage();
             });
         }
@@ -3689,10 +3769,19 @@
         // 재시작 버튼 이벤트 (강화된 처리)
         const restartBtn = document.getElementById('restartBtn');
         if (restartBtn) {
+            // 클릭 이벤트
             restartBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('재시작 버튼 클릭됨');
+                location.reload();
+            });
+            
+            // 터치 이벤트 (모바일 대응)
+            restartBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('재시작 버튼 터치됨');
                 location.reload();
             });
         }
