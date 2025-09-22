@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘리그라피 합성기 - 사진 합성 및 편집</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jua', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="calligraphy-common.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        </div>
+    </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+    </div>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-button" onclick="goBack()" style="display: block;">←</button>
+
+    <!-- 단계 4: 사진 합성 및 편집 -->
+    <div class="step active" id="step4">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">사진 합성 및 편집</h1>
+            
+            <div class="max-w-4xl mx-auto">
+                <div class="flex justify-center">
+                    <!-- 미리보기 영역 -->
+                    <div class="control-panel w-full max-w-2xl ">
+                        <div class="text-center mt-6 space-x-4">
+                            <button id="multiplyMode" class="active bg-white text-black px-6 py-2 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">검은 글씨</button>
+                            <button id="screenMode" class="bg-black text-white px-6 py-2 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">흰 글씨</button>
+                        </div>
+                        <div class="composite-preview-container mt-6">
+                            <div class="composite-preview" id="compositePreview" style="width: 100%; display: flex; justify-content: center; align-items: center;">
+                                <canvas id="fabricCanvas" width="500" height="400" style="max-width: 100%; height: 400px; display: block;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-6 space-x-4">
+                            <button id="restartBtn" class="bg-gray-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px; font-weight: 400;">
+                                다시 시작
+                            </button>
+                            <button id="downloadBtn" class="bg-purple-500 text-white px-8 py-3 rounded-full text-base shadow-lg hover:shadow-xl transition-all" style="z-index: 10000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px; font-weight: 400;">
+                                다운로드
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 커스텀 모달 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-modal-content">
+            <h3 id="modalTitle">알림</h3>
+            <p id="modalMessage">메시지가 여기에 표시됩니다.</p>
+            <div>
+                <button id="modalConfirm" onclick="closeModal()">확인</button>
+                <button id="modalCancel" onclick="closeModal()" class="secondary" style="display: none;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="calligraphy-common.js"></script>
+    <script>
+        // 합성 시스템 클래스
+        class FabricCompositeSystem {
+            constructor() {
+                this.canvas = null;
+                this.backgroundImage = null;
+                this.calligraphyImage = null;
+                this.blendMode = 'multiply';
+                this.init();
+            }
+
+            init() {
+                // 화면 크기에 따른 캔버스 크기 계산
+                const containerWidth = document.getElementById('compositePreview').clientWidth;
+                const maxWidth = Math.min(containerWidth - 20, 500); // 여백 20px 고려
+                const maxHeight = Math.min(window.innerHeight * 0.4, 400); // 화면 높이의 40%
+                
+                // Fabric.js 캔버스 초기화 (반응형 크기로 설정)
+                this.canvas = new fabric.Canvas('fabricCanvas', {
+                    width: maxWidth,
+                    height: maxHeight,
+                    backgroundColor: '#ffffff'
+                });
+
+                // 배경 이미지 추가
+                if (backgroundImage) {
+                    fabric.Image.fromURL(backgroundImage, (img) => {
+                        // 배경 이미지 전체가 보이도록 스케일링 (비율 유지)
+                        const scaleX = this.canvas.width / img.width;
+                        const scaleY = this.canvas.height / img.height;
+                        const scale = Math.min(scaleX, scaleY); // 이미지 전체가 보이도록
+                        
+                        img.set({
+                            scaleX: scale,
+                            scaleY: scale,
+                            left: this.canvas.width / 2,
+                            top: this.canvas.height / 2,
+                            originX: 'center',
+                            originY: 'center',
+                            selectable: false,
+                            evented: false
+                        });
+                        this.canvas.add(img);
+                        this.canvas.sendToBack(img);
+                        this.backgroundImage = img;
+                    });
+                }
+
+                // 글씨 이미지 추가
+                if (croppedCalligraphy) {
+                    fabric.Image.fromURL(croppedCalligraphy, (img) => {
+                        // 기본 크기 설정 (더 작은 고정 스케일)
+                        const scale = 0.03; // 원본 이미지 크기의 3%
+                        
+                        img.set({
+                            left: this.canvas.width / 2,
+                            top: this.canvas.height / 2,
+                            scaleX: scale,
+                            scaleY: scale,
+                            originX: 'center',
+                            originY: 'center',
+                            selectable: true,
+                            hasControls: true,
+                            hasBorders: true,
+                            cornerStyle: 'circle',
+                            cornerColor: '#8b5cf6',
+                            cornerSize: 12,
+                            transparentCorners: false,
+                            borderColor: '#8b5cf6',
+                            borderScaleFactor: 2
+                        });
+                        
+                        this.canvas.add(img);
+                        this.calligraphyImage = img;
+                        this.canvas.setActiveObject(img);
+                        
+                        // 블렌드 모드 적용
+                        this.applyBlendMode();
+                    });
+                }
+
+                // 이벤트 리스너 설정
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                // 블렌드 모드 버튼
+                const multiplyMode = document.getElementById('multiplyMode');
+                const screenMode = document.getElementById('screenMode');
+                
+                if (multiplyMode) {
+                    multiplyMode.addEventListener('click', () => {
+                        console.log('검은 글씨 버튼 클릭됨');
+                        this.setBlendMode('multiply');
+                    });
+                }
+                
+                if (screenMode) {
+                    screenMode.addEventListener('click', () => {
+                        console.log('흰 글씨 버튼 클릭됨');
+                        this.setBlendMode('screen');
+                    });
+                }
+
+                // 다운로드 버튼
+                const downloadBtn = document.getElementById('downloadBtn');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', () => this.downloadImage());
+                }
+
+                // 다시 시작 버튼
+                const restartBtn = document.getElementById('restartBtn');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', async () => {
+                        console.log('다시 시작 버튼 클릭됨');
+                        await saveData();
+                        restartProcess();
+                        window.location.href = 'calligraphy-step1.html';
+                    });
+                }
+
+                // 캔버스 변경 이벤트
+                this.canvas.on('object:modified', () => {
+                    this.saveCurrentState();
+                });
+
+                // 창 크기 변경 시 캔버스 리사이즈
+                window.addEventListener('resize', () => {
+                    this.resizeCanvas();
+                });
+            }
+
+            setBlendMode(mode) {
+                console.log('setBlendMode 호출됨:', mode);
+                this.blendMode = mode;
+                
+                // 버튼 상태 업데이트
+                const multiplyMode = document.getElementById('multiplyMode');
+                const screenMode = document.getElementById('screenMode');
+                
+                if (multiplyMode && screenMode) {
+                    multiplyMode.classList.toggle('active', mode === 'multiply');
+                    screenMode.classList.toggle('active', mode === 'screen');
+                    console.log('버튼 상태 업데이트:', {
+                        multiplyActive: multiplyMode.classList.contains('active'),
+                        screenActive: screenMode.classList.contains('active')
+                    });
+                }
+                
+                this.applyBlendMode();
+            }
+
+            applyBlendMode() {
+                if (!this.calligraphyImage) return;
+
+                if (this.blendMode === 'multiply') {
+                    // 검은 글씨: multiply 블렌드 모드
+                    this.calligraphyImage.set('filters', []);
+                    this.calligraphyImage.set('globalCompositeOperation', 'multiply');
+                } else if (this.blendMode === 'screen') {
+                    // 흰 글씨: 이미지 반전 + screen 블렌드 모드
+                    this.calligraphyImage.set('filters', [new fabric.Image.filters.Invert()]);
+                    this.calligraphyImage.set('globalCompositeOperation', 'screen');
+                }
+                
+                this.calligraphyImage.applyFilters();
+                this.canvas.renderAll();
+                
+                console.log('블렌드 모드 적용:', this.blendMode, 'compositeOperation:', this.calligraphyImage.globalCompositeOperation);
+            }
+
+            saveCurrentState() {
+                if (this.calligraphyImage) {
+                    currentPosition = {
+                        x: (this.calligraphyImage.left / this.canvas.width) * 100,
+                        y: (this.calligraphyImage.top / this.canvas.height) * 100
+                    };
+                    currentScale = this.calligraphyImage.scaleX;
+                    currentRotation = this.calligraphyImage.angle;
+                    currentBlendMode = this.blendMode;
+                    
+                    saveData();
+                }
+            }
+
+            resizeCanvas() {
+                // 화면 크기에 따른 캔버스 크기 재계산
+                const containerWidth = document.getElementById('compositePreview').clientWidth;
+                const maxWidth = Math.min(containerWidth - 20, 500);
+                const maxHeight = Math.min(window.innerHeight * 0.4, 400);
+                
+                // 캔버스 크기 조정
+                this.canvas.setDimensions({
+                    width: maxWidth,
+                    height: maxHeight
+                });
+                
+                // 배경 이미지 크기 재조정
+                if (this.backgroundImage) {
+                    const scaleX = maxWidth / this.backgroundImage.width;
+                    const scaleY = maxHeight / this.backgroundImage.height;
+                    const scale = Math.min(scaleX, scaleY); // 이미지 전체가 보이도록
+                    
+                    this.backgroundImage.set({
+                        scaleX: scale,
+                        scaleY: scale,
+                        left: maxWidth / 2,
+                        top: maxHeight / 2,
+                        originX: 'center',
+                        originY: 'center'
+                    });
+                }
+                
+                // 글씨 이미지 위치 재조정
+                if (this.calligraphyImage) {
+                    const currentLeftPercent = this.calligraphyImage.left / this.canvas.width;
+                    const currentTopPercent = this.calligraphyImage.top / this.canvas.height;
+                    
+                    this.calligraphyImage.set({
+                        left: currentLeftPercent * maxWidth,
+                        top: currentTopPercent * maxHeight
+                    });
+                }
+                
+                this.canvas.renderAll();
+            }
+
+            async restart() {
+                console.log('다시 시작 버튼 클릭됨');
+                await saveData();
+                restartProcess();
+                window.location.href = 'calligraphy-step1.html';
+            }
+
+            async downloadImage() {
+                if (!this.backgroundImage || !this.calligraphyImage) {
+                    showModal('알림', '합성할 이미지가 없습니다.');
+                    return;
+                }
+
+                try {
+                    // 별도 캔버스 생성하여 정확한 합성
+                    const downloadCanvas = document.createElement('canvas');
+                    const downloadCtx = downloadCanvas.getContext('2d');
+                    
+                    // 배경 이미지의 원본 크기 사용
+                    const bgImg = this.backgroundImage.getElement();
+                    downloadCanvas.width = bgImg.naturalWidth;
+                    downloadCanvas.height = bgImg.naturalHeight;
+                    
+                    // 배경 이미지 그리기
+                    downloadCtx.drawImage(bgImg, 0, 0, downloadCanvas.width, downloadCanvas.height);
+                    
+                    // 미리보기 캔버스에서 다운로드 캔버스로의 정확한 변환
+                    const canvasToDownloadRatioX = downloadCanvas.width / this.canvas.width;
+                    const canvasToDownloadRatioY = downloadCanvas.height / this.canvas.height;
+                    
+                    // 정확한 크기 매칭을 위해 배경 이미지 기준으로 계산
+                    const bgNaturalWidth = bgImg.naturalWidth;
+                    const bgNaturalHeight = bgImg.naturalHeight;
+                    
+                    // 배경 이미지의 캔버스에서의 실제 크기
+                    const bgCanvasWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
+                    const bgCanvasHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
+                    
+                    // 배경 이미지의 실제 스케일 비율 계산
+                    // 배경 이미지가 캔버스에서 어떻게 스케일링되었는지 확인
+                    const bgScaleRatioX = bgNaturalWidth / bgCanvasWidth;
+                    const bgScaleRatioY = bgNaturalHeight / bgCanvasHeight;
+                    const bgScaleRatio = Math.max(bgScaleRatioX, bgScaleRatioY); // 배경이 캔버스를 채우는 비율
+                    
+                    // 글씨 이미지의 실제 크기 (원본 크기 * 스케일)
+                    const actualWidth = this.calligraphyImage.width * this.calligraphyImage.scaleX;
+                    const actualHeight = this.calligraphyImage.height * this.calligraphyImage.scaleY;
+                    
+                    // 다운로드 캔버스에서의 크기 (배경 이미지와 동일한 스케일)
+                    const finalWidth = actualWidth * bgScaleRatio;
+                    const finalHeight = actualHeight * bgScaleRatio;
+                    
+                    // 다운로드 캔버스에서의 위치 (배경 이미지 기준)
+                    // 배경 이미지의 캔버스에서의 중심점
+                    const bgCanvasCenterX = this.backgroundImage.left;
+                    const bgCanvasCenterY = this.backgroundImage.top;
+                    
+                    // 글씨 이미지의 배경 이미지 중심점으로부터의 상대적 위치
+                    const relativeX = this.calligraphyImage.left - bgCanvasCenterX;
+                    const relativeY = this.calligraphyImage.top - bgCanvasCenterY;
+                    
+                    // 다운로드 캔버스에서의 위치 (배경 이미지 중심점 기준)
+                    const downloadCenterX = downloadCanvas.width / 2;
+                    const downloadCenterY = downloadCanvas.height / 2;
+                    const left = downloadCenterX + (relativeX * bgScaleRatio);
+                    const top = downloadCenterY + (relativeY * bgScaleRatio);
+                    
+                    console.log('다운로드 계산 (정확한 크기 매칭):', {
+                        canvasSize: `${this.canvas.width}x${this.canvas.height}`,
+                        downloadSize: `${downloadCanvas.width}x${downloadCanvas.height}`,
+                        bgNaturalSize: `${bgNaturalWidth}x${bgNaturalHeight}`,
+                        bgCanvasSize: `${bgCanvasWidth}x${bgCanvasHeight}`,
+                        bgScaleRatioX,
+                        bgScaleRatioY,
+                        bgScaleRatio,
+                        relativePos: `${relativeX}, ${relativeY}`,
+                        actualSize: `${actualWidth}x${actualHeight}`,
+                        finalSize: `${finalWidth}x${finalHeight}`,
+                        calligraphyPos: `${left}, ${top}`,
+                        originalPos: `${this.calligraphyImage.left}, ${this.calligraphyImage.top}`,
+                        aspectRatio: finalWidth / finalHeight,
+                        originalAspectRatio: actualWidth / actualHeight
+                    });
+                    
+                    // 글씨 이미지 그리기
+                    downloadCtx.save();
+                    downloadCtx.translate(left, top);
+                    downloadCtx.rotate(this.calligraphyImage.angle * Math.PI / 180);
+                    
+                    // 고해상도로 글씨 이미지 그리기 (품질 개선)
+                    const highResMultiplier = 1; // 원본 크기 유지 (크기 정확도 우선)
+                    const highResWidth = finalWidth * highResMultiplier;
+                    const highResHeight = finalHeight * highResMultiplier;
+                    
+                    // 크롭된 글씨 이미지 로드 및 그리기
+                    const croppedImg = new Image();
+                    croppedImg.src = croppedCalligraphy;
+                    
+                    await new Promise(resolve => {
+                        croppedImg.onload = resolve;
+                        if (croppedImg.complete) resolve();
+                    });
+                    
+                    if (this.blendMode === 'multiply') {
+                        // 검은 글씨: multiply 블렌드 모드
+                        downloadCtx.globalCompositeOperation = 'multiply';
+                        downloadCtx.imageSmoothingEnabled = true;
+                        downloadCtx.imageSmoothingQuality = 'high';
+                        downloadCtx.drawImage(croppedImg, -highResWidth/2, -highResHeight/2, highResWidth, highResHeight);
+                    } else if (this.blendMode === 'screen') {
+                        // 흰 글씨: invert 처리 후 screen 블렌드
+                        downloadCtx.globalCompositeOperation = 'screen';
+                        
+                        // 고해상도 임시 캔버스에서 invert 처리
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCanvas.width = highResWidth;
+                        tempCanvas.height = highResHeight;
+                        
+                        tempCtx.imageSmoothingEnabled = true;
+                        tempCtx.imageSmoothingQuality = 'high';
+                        tempCtx.drawImage(croppedImg, 0, 0, highResWidth, highResHeight);
+                        
+                        // 픽셀 단위로 invert 처리
+                        const imageData = tempCtx.getImageData(0, 0, highResWidth, highResHeight);
+                        const data = imageData.data;
+                        
+                        for (let i = 0; i < data.length; i += 4) {
+                            data[i] = 255 - data[i];     // R
+                            data[i + 1] = 255 - data[i + 1]; // G
+                            data[i + 2] = 255 - data[i + 2]; // B
+                            // Alpha는 그대로 유지
+                        }
+                        
+                        tempCtx.putImageData(imageData, 0, 0);
+                        
+                        // invert된 이미지를 메인 캔버스에 그리기
+                        downloadCtx.imageSmoothingEnabled = true;
+                        downloadCtx.imageSmoothingQuality = 'high';
+                        downloadCtx.drawImage(tempCanvas, -highResWidth/2, -highResHeight/2, highResWidth, highResHeight);
+                    }
+                    downloadCtx.restore();
+                    
+                    // 다운로드 실행
+                    const dataURL = downloadCanvas.toDataURL('image/png', 1.0);
+                    const link = document.createElement('a');
+                    link.download = 'calligraphy-composite.png';
+                    link.href = dataURL;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    console.log('다운로드 완료');
+                    
+                } catch (error) {
+                    console.error('다운로드 오류:', error);
+                    showModal('오류', '다운로드 중 오류가 발생했습니다.');
+                }
+            }
+        }
+
+        // 기존 CompositeSystem (호환성을 위해 유지)
+        class CompositeSystem {
+            constructor() {
+                this.position = { x: 50, y: 50 };
+                this.scale = 0.3;
+                this.rotation = 0;
+                this.blendMode = 'multiply';
+                this.isDragging = false;
+                this.isScaling = false;
+                this.isRotating = false;
+                this.dragStart = { x: 0, y: 0 };
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.updateDisplay();
+            }
+
+            setupEventListeners() {
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                const scaleHandle = document.getElementById('scaleHandle');
+                const rotateHandle = document.getElementById('rotateHandle');
+                const multiplyMode = document.getElementById('multiplyMode');
+                const screenMode = document.getElementById('screenMode');
+                const downloadBtn = document.getElementById('downloadBtn');
+                const restartBtn = document.getElementById('restartBtn');
+
+                // 드래그 이벤트
+                if (calligraphyOverlay) {
+                    calligraphyOverlay.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                    calligraphyOverlay.addEventListener('touchstart', (e) => this.handleTouchStart(e));
+                }
+
+                // 스케일 핸들
+                if (scaleHandle) {
+                    scaleHandle.addEventListener('mousedown', (e) => this.handleScaleStart(e));
+                    scaleHandle.addEventListener('touchstart', (e) => this.handleScaleStart(e));
+                }
+
+                // 회전 핸들
+                if (rotateHandle) {
+                    rotateHandle.addEventListener('mousedown', (e) => this.handleRotateStart(e));
+                    rotateHandle.addEventListener('touchstart', (e) => this.handleRotateStart(e));
+                }
+
+                // 블렌드 모드 버튼
+                if (multiplyMode) {
+                    multiplyMode.addEventListener('click', () => {
+                        console.log('검은 글씨 버튼 클릭됨');
+                        this.setBlendMode('multiply');
+                    });
+                }
+                if (screenMode) {
+                    screenMode.addEventListener('click', () => {
+                        console.log('흰 글씨 버튼 클릭됨');
+                        this.setBlendMode('screen');
+                    });
+                }
+
+                // 다운로드 버튼
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', () => this.downloadImage());
+                }
+
+                // 다시 시작 버튼 (이미 선언된 restartBtn 사용)
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', async () => {
+                        console.log('다시 시작 버튼 클릭됨');
+                        await saveData();
+                        restartProcess();
+                        window.location.href = 'calligraphy-step1.html';
+                    });
+                }
+
+                // 전역 마우스/터치 이벤트
+                document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                document.addEventListener('touchmove', (e) => this.handleTouchMove(e));
+                document.addEventListener('touchend', (e) => this.handleTouchEnd(e));
+            }
+
+            handleMouseDown(e) {
+                e.preventDefault();
+                this.isDragging = true;
+                this.dragStart = { x: e.clientX, y: e.clientY };
+            }
+
+            handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.isDragging = true;
+                this.dragStart = { x: touch.clientX, y: touch.clientY };
+            }
+
+            handleScaleStart(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.isScaling = true;
+                this.dragStart = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY };
+            }
+
+            handleRotateStart(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.isRotating = true;
+                this.dragStart = { x: e.clientX || e.touches[0].clientX, y: e.clientY || e.touches[0].clientY };
+            }
+
+            handleMouseMove(e) {
+                if (this.isDragging) {
+                    this.updatePosition(e.clientX, e.clientY);
+                } else if (this.isScaling) {
+                    this.updateScale(e.clientX, e.clientY);
+                } else if (this.isRotating) {
+                    this.updateRotation(e.clientX, e.clientY);
+                }
+            }
+
+            handleTouchMove(e) {
+                if (this.isDragging || this.isScaling || this.isRotating) {
+                    const touch = e.touches[0];
+                    if (this.isDragging) {
+                        this.updatePosition(touch.clientX, touch.clientY);
+                    } else if (this.isScaling) {
+                        this.updateScale(touch.clientX, touch.clientY);
+                    } else if (this.isRotating) {
+                        this.updateRotation(touch.clientX, touch.clientY);
+                    }
+                }
+            }
+
+            handleMouseUp(e) {
+                this.isDragging = false;
+                this.isScaling = false;
+                this.isRotating = false;
+            }
+
+            handleTouchEnd(e) {
+                this.isDragging = false;
+                this.isScaling = false;
+                this.isRotating = false;
+            }
+
+            updatePosition(clientX, clientY) {
+                const container = document.getElementById('compositePreview');
+                if (!container) return;
+
+                const rect = container.getBoundingClientRect();
+                const deltaX = ((clientX - this.dragStart.x) / rect.width) * 100;
+                const deltaY = ((clientY - this.dragStart.y) / rect.height) * 100;
+
+                this.position.x = Math.max(0, Math.min(100, this.position.x + deltaX));
+                this.position.y = Math.max(0, Math.min(100, this.position.y + deltaY));
+
+                this.dragStart = { x: clientX, y: clientY };
+                this.updateDisplay();
+            }
+
+            updateScale(clientX, clientY) {
+                const deltaX = clientX - this.dragStart.x;
+                const deltaY = clientY - this.dragStart.y;
+                const delta = Math.sqrt(deltaX * deltaX + deltaY * deltaY) / 100;
+
+                this.scale = Math.max(0.1, Math.min(2, this.scale + delta * 0.01));
+
+                this.dragStart = { x: clientX, y: clientY };
+                this.updateDisplay();
+            }
+
+            updateRotation(clientX, clientY) {
+                const container = document.getElementById('compositePreview');
+                if (!container) return;
+
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                const angle1 = Math.atan2(this.dragStart.y - centerY, this.dragStart.x - centerX);
+                const angle2 = Math.atan2(clientY - centerY, clientX - centerX);
+                const deltaAngle = angle2 - angle1;
+
+                this.rotation += deltaAngle * (180 / Math.PI);
+
+                this.dragStart = { x: clientX, y: clientY };
+                this.updateDisplay();
+            }
+
+            setBlendMode(mode) {
+                console.log('setBlendMode 호출됨:', mode);
+                this.blendMode = mode;
+                
+                // 버튼 상태 업데이트
+                const multiplyMode = document.getElementById('multiplyMode');
+                const screenMode = document.getElementById('screenMode');
+                
+                if (multiplyMode && screenMode) {
+                    multiplyMode.classList.toggle('active', mode === 'multiply');
+                    screenMode.classList.toggle('active', mode === 'screen');
+                    console.log('버튼 상태 업데이트:', {
+                        multiplyActive: multiplyMode.classList.contains('active'),
+                        screenActive: screenMode.classList.contains('active')
+                    });
+                }
+                
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                const calligraphyOverlay = document.getElementById('calligraphyOverlay');
+                if (!calligraphyOverlay) return;
+
+                // 위치, 크기, 회전 적용
+                calligraphyOverlay.style.left = this.position.x + '%';
+                calligraphyOverlay.style.top = this.position.y + '%';
+                calligraphyOverlay.style.transform = `translate(-50%, -50%) scale(${this.scale}) rotate(${this.rotation}deg)`;
+                
+                // 블렌드 모드 적용
+                const calligraphyImg = document.getElementById('compositeCalligraphy');
+                if (calligraphyImg) {
+                    if (this.blendMode === 'multiply') {
+                        // 검은 글씨: multiply 블렌드 모드
+                        calligraphyOverlay.style.mixBlendMode = 'multiply';
+                        calligraphyImg.style.filter = 'none';
+                    } else if (this.blendMode === 'screen') {
+                        // 흰 글씨: 이미지 반전 + multiply 블렌드 모드
+                        calligraphyOverlay.style.mixBlendMode = 'screen';
+                        calligraphyImg.style.filter = 'invert(1)';
+                    }
+                    
+                    console.log('블렌드 모드 적용:', this.blendMode, '필터:', calligraphyImg.style.filter);
+                }
+            }
+
+            async downloadImage() {
+                if (!backgroundImage || !croppedCalligraphy) {
+                    showModal('알림', '합성할 이미지가 없습니다.');
+                    return;
+                }
+
+                try {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 배경 이미지 로드
+                    const bgImg = new Image();
+                    bgImg.onload = () => {
+                        canvas.width = bgImg.width;
+                        canvas.height = bgImg.height;
+                        
+                        // 배경 그리기
+                        ctx.drawImage(bgImg, 0, 0);
+                        
+                        // 글씨 이미지 로드 및 합성
+                        const calligraphyImg = new Image();
+                        calligraphyImg.onload = () => {
+                            // 글씨 위치 계산 (배경 이미지 크기 기준)
+                            const x = (this.position.x / 100) * canvas.width;
+                            const y = (this.position.y / 100) * canvas.height;
+                            const scaledWidth = calligraphyImg.width * this.scale;
+                            const scaledHeight = calligraphyImg.height * this.scale;
+                            
+                            // 회전 중심점 설정
+                            ctx.save();
+                            ctx.translate(x, y);
+                            ctx.rotate(this.rotation * Math.PI / 180);
+                            
+                            // 블렌드 모드 적용
+                            if (this.blendMode === 'screen') {
+                                ctx.globalCompositeOperation = 'screen';
+                            } else {
+                                ctx.globalCompositeOperation = 'multiply';
+                            }
+                            
+                            // 글씨 그리기
+                            ctx.drawImage(calligraphyImg, -scaledWidth/2, -scaledHeight/2, scaledWidth, scaledHeight);
+                            ctx.restore();
+                            
+                            // 다운로드
+                            const link = document.createElement('a');
+                            link.download = 'calligraphy-composite.png';
+                            link.href = canvas.toDataURL('image/png');
+                            link.click();
+                            
+                            showModal('완료', '이미지가 다운로드되었습니다!');
+                        };
+                        calligraphyImg.src = croppedCalligraphy;
+                    };
+                    bgImg.src = backgroundImage;
+                    
+                } catch (error) {
+                    console.error('다운로드 오류:', error);
+                    showModal('오류', '다운로드 중 오류가 발생했습니다.');
+                }
+            }
+
+            async restart() {
+                await saveData();
+                restartProcess();
+                window.location.href = 'calligraphy-step1.html';
+            }
+        }
+
+        // 단계 4 전용 JavaScript
+        let compositeSystem = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const compositeBackground = document.getElementById('compositeBackground');
+            const compositeCalligraphy = document.getElementById('compositeCalligraphy');
+            
+            // 데이터 복원
+            restoreData();
+            
+            // step4 페이지 강제 활성화
+            const step4El = document.getElementById('step4');
+            if (step4El) {
+                step4El.classList.add('active');
+            }
+            
+            // Fabric.js 합성 시스템 초기화
+            if (backgroundImage && croppedCalligraphy) {
+                compositeSystem = new FabricCompositeSystem();
+                
+                // 저장된 위치 정보 적용 (Fabric.js 객체에 직접 적용)
+                setTimeout(() => {
+                    if (compositeSystem.calligraphyImage && currentPosition) {
+                        compositeSystem.calligraphyImage.set({
+                            left: (currentPosition.x / 100) * compositeSystem.canvas.width,
+                            top: (currentPosition.y / 100) * compositeSystem.canvas.height
+                        });
+                    }
+                    if (compositeSystem.calligraphyImage && currentScale) {
+                        compositeSystem.calligraphyImage.set({
+                            scaleX: currentScale,
+                            scaleY: currentScale
+                        });
+                    }
+                    if (compositeSystem.calligraphyImage && currentRotation) {
+                        compositeSystem.calligraphyImage.set({
+                            angle: currentRotation
+                        });
+                    }
+                    if (currentBlendMode) {
+                        compositeSystem.setBlendMode(currentBlendMode);
+                    }
+                    
+                    compositeSystem.canvas.renderAll();
+                }, 1000); // 이미지 로딩 완료 대기
+                
+            } else {
+                showModal('알림', '합성할 이미지가 없습니다. 이전 단계로 돌아가주세요.');
+                setTimeout(() => {
+                    window.location.href = 'calligraphy-step1.html';
+                }, 2000);
+            }
+            
+            // 데이터 저장 (위치 변경 시)
+            setInterval(async () => {
+                if (compositeSystem) {
+                    currentPosition = compositeSystem.position;
+                    currentScale = compositeSystem.scale;
+                    currentRotation = compositeSystem.rotation;
+                    currentBlendMode = compositeSystem.blendMode;
+                    await saveData();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

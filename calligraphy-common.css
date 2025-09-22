@@ -1,0 +1,451 @@
+/* 캘리그라피 합성기 공통 스타일 */
+body {
+    font-family: 'Jua', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+    height: 100dvh; /* 동적 뷰포트 높이 사용 (모바일 최적화) */
+    max-height: 100vh;
+    max-height: 100dvh; /* 동적 뷰포트 높이 사용 */
+    overflow: hidden; /* 스크롤 완전 방지 */
+    margin: 0;
+    padding: 0;
+    /* 모바일 터치 최적화 */
+    touch-action: none; /* 모든 터치 액션 방지 */
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* 터치 스크롤 방지 */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+}
+
+/* 모바일 뷰포트 높이 보정 */
+@supports (height: 100dvh) {
+    body {
+        height: 100dvh;
+        max-height: 100dvh;
+    }
+}
+
+/* 스텝 컨테이너 */
+.step {
+    display: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    position: relative;
+}
+
+.step.active {
+    display: block;
+}
+
+/* 컨트롤 패널 */
+.control-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 파일 업로드 영역 */
+.file-upload-area {
+    border: 3px dashed #d1d5db;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+}
+
+.file-upload-area:hover {
+    border-color: #8b5cf6;
+    background: #f3f4f6;
+    transform: translateY(-2px);
+}
+
+.file-upload-area.dragover {
+    border-color: #8b5cf6;
+    background: #ede9fe;
+    transform: scale(1.02);
+}
+
+/* 이미지 미리보기 */
+.image-preview {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    object-fit: contain;
+}
+
+/* 단계 표시기 */
+.step-indicator {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1rem;
+    z-index: 1000;
+}
+
+.step-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.step-dot.active {
+    background: white;
+    transform: scale(1.2);
+}
+
+.step-dot.completed {
+    background: #10b981;
+}
+
+/* 버튼 스타일 */
+button {
+    font-family: 'Jua', sans-serif;
+    transition: all 0.3s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* 뒤로가기 버튼 */
+.back-button {
+    position: fixed;
+    top: 2rem;
+    left: 2rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 햄버거 메뉴 */
+#menu-hamburger {
+    position: fixed;
+    top: 24px;
+    right: 28px;
+    z-index: 9999;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border-radius: 50%;
+    transition: background 0.18s;
+}
+
+#menu-hamburger:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.menu-bar {
+    display: block;
+    height: 4px;
+    width: 100%;
+    background: #fff;
+    border-radius: 2px;
+    margin: 2px 0;
+}
+
+#menu-popup {
+    display: none;
+    position: fixed;
+    top: 70px;
+    right: 32px;
+    z-index: 10000;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px #0003;
+    padding: 18px 28px 14px 28px;
+    min-width: 180px;
+    text-align: left;
+}
+
+/* 모달 스타일 */
+.custom-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    backdrop-filter: blur(5px);
+}
+
+.custom-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+}
+
+.custom-modal-content h3 {
+    margin: 0 0 1rem 0;
+    color: #374151;
+    font-size: 1.25rem;
+}
+
+.custom-modal-content p {
+    margin: 0 0 1.5rem 0;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.custom-modal-content button {
+    padding: 0.75rem 1.5rem;
+    margin: 0 0.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.custom-modal-content button:first-child {
+    background: #8b5cf6;
+    color: white;
+}
+
+.custom-modal-content button.secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* 크롭 영역 스타일 */
+.crop-overlay {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.crop-area {
+    position: absolute;
+    border: 2px solid #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    cursor: move;
+    user-select: none;
+    touch-action: manipulation; /* 터치 드래그 허용 */
+    -webkit-touch-callout: none;
+}
+
+.crop-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #8b5cf6;
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: manipulation; /* 터치 드래그 허용 */
+    -webkit-touch-callout: none;
+}
+
+.crop-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
+.crop-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
+.crop-handle.sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+.crop-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
+
+/* 합성 미리보기 */
+.composite-preview-container {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.composite-preview {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.background-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.calligraphy-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.calligraphy-overlay img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100%;
+    pointer-events: auto;
+    cursor: move;
+}
+
+/* 편집 핸들 */
+.edit-handles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.edit-handle {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: #8b5cf6;
+    border: 2px solid white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    pointer-events: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.edit-handle.scale {
+    bottom: -12px;
+    right: -12px;
+    cursor: se-resize;
+}
+
+.edit-handle.rotate {
+    top: -12px;
+    right: -12px;
+    cursor: grab;
+}
+
+.edit-handle.rotate:active {
+    cursor: grabbing;
+}
+
+/* 블렌드 모드 버튼 */
+.blend-mode-buttons {
+    display: flex;
+    margin-bottom: 1rem;
+}
+
+.blend-mode-buttons.justify-between {
+    justify-content: space-between;
+}
+
+.blend-mode-buttons.justify-center {
+    justify-content: center;
+    gap: 1rem;
+}
+
+.blend-mode-buttons button.active {
+    background: #8b5cf6 !important;
+    color: white !important;
+}
+
+/* 특정 버튼 스타일 오버라이드 */
+#multiplyMode.active {
+    background: white !important;
+    color: black !important;
+}
+
+#screenMode.active {
+    background: black !important;
+    color: white !important;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .control-panel {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .file-upload-area {
+        padding: 2rem 1rem;
+    }
+    
+    .step-indicator {
+        bottom: 1rem;
+    }
+    
+    .back-button {
+        top: 1rem;
+        left: 1rem;
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+    
+    #menu-hamburger {
+        top: 20px;
+        right: 24px;
+        width: 40px;
+        height: 40px;
+    }
+    
+    .composite-preview {
+        height: 300px;
+    }
+    
+    .blend-mode-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .blend-mode-buttons button {
+        width: 100%;
+    }
+}

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘리그라피 합성기 - 글씨 부분 자르기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jua', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="calligraphy-common.css">
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        </div>
+    </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+    </div>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-button" onclick="goBack()" style="display: block;">←</button>
+
+    <!-- 단계 3: 글씨 사진 보정 및 자르기 -->
+    <div class="step active" id="step3">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">글씨 부분 자르기</h1>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="control-panel">
+                    <div class="text-center mb-4">
+                        <h2 class="text-xl font-semibold mb-2">글씨 부분을 선택하세요</h2>
+                        <p class="text-gray-600">드래그하여 글씨 부분을 정확히 선택해주세요</p>
+                    </div>
+                    
+                    
+                    
+                    <div class="text-center">
+                        <div class="cropper-container" style="max-width: 100%; max-height: 400px;">
+                            <img id="processedCalligraphy" class="image-preview" alt="보정된 글씨" style="max-width: 100%; max-height: 400px;">
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-6">
+                        <button id="nextToStep4" class="bg-purple-500 text-white px-8 py-3 rounded-full text-lg shadow-lg hover:shadow-xl transition-all" style="z-index: 1000; position: relative; pointer-events: auto; min-width: 120px; min-height: 50px;">
+                            자르기 완료
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 커스텀 모달 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-modal-content">
+            <h3 id="modalTitle">알림</h3>
+            <p id="modalMessage">메시지가 여기에 표시됩니다.</p>
+            <div>
+                <button id="modalConfirm" onclick="closeModal()">확인</button>
+                <button id="modalCancel" onclick="closeModal()" class="secondary" style="display: none;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="calligraphy-common.js"></script>
+    <!-- Cropper.js JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        // Cropper.js를 사용한 크롭 시스템
+        class CropSystem {
+            constructor() {
+                this.cropper = null;
+                this.imageElement = null;
+            }
+
+            init(imageElement) {
+                this.imageElement = imageElement;
+                
+                // Cropper.js 초기화
+                this.cropper = new Cropper(imageElement, {
+                    aspectRatio: NaN, // 자유 비율
+                    viewMode: 1, // 제한된 뷰 모드
+                    dragMode: 'none', // 이미지 드래그 비활성화
+                    autoCropArea: 0.8, // 자동 크롭 영역 80%
+                    restore: false,
+                    guides: true,
+                    center: true,
+                    highlight: true,
+                    cropBoxMovable: true, // 크롭 박스만 이동 가능
+                    cropBoxResizable: true, // 크롭 박스 크기 조정 가능
+                    toggleDragModeOnDblclick: false,
+                    responsive: true,
+                    checkCrossOrigin: false,
+                    checkOrientation: false,
+                    modal: false,
+                    background: false,
+                    // 이미지 이동 및 줌 비활성화
+                    movable: false, // 이미지 이동 비활성화
+                    rotatable: false, // 이미지 회전 비활성화
+                    scalable: false, // 이미지 스케일링 비활성화
+                    zoomable: false, // 줌 비활성화
+                    zoomOnTouch: false, // 터치 줌 비활성화
+                    zoomOnWheel: false, // 마우스 휠 줌 비활성화
+                    mouseWheelZoom: false, // 마우스 휠 줌 비활성화
+                    touchDragZoom: false, // 터치 드래그 줌 비활성화
+                    // 크롭 박스 크기 제한
+                    minCropBoxWidth: 20,
+                    minCropBoxHeight: 20,
+                    maxCropBoxWidth: 1000,
+                    maxCropBoxHeight: 1000
+                });
+                
+                console.log('Cropper.js 초기화 완료');
+            }
+
+            destroy() {
+                if (this.cropper) {
+                    this.cropper.destroy();
+                    this.cropper = null;
+                    console.log('Cropper.js 정리 완료');
+                }
+            }
+
+            // 크롭된 이미지 가져오기
+            getCroppedImage() {
+                if (!this.cropper) {
+                    throw new Error('Cropper가 초기화되지 않았습니다.');
+                }
+                
+                return new Promise((resolve) => {
+                    const canvas = this.cropper.getCroppedCanvas({
+                        width: 1600,  // 해상도 2배 증가
+                        height: 1200, // 해상도 2배 증가
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: 'high',
+                        fillColor: '#ffffff' // 배경색 설정
+                    });
+                    
+                    if (canvas) {
+                        const dataURL = canvas.toDataURL('image/png', 1.0); // 압축률 최고 품질
+                        resolve(dataURL);
+                    } else {
+                        resolve(null);
+                    }
+                });
+            }
+
+            // 크롭 영역 리셋
+            reset() {
+                if (this.cropper) {
+                    this.cropper.reset();
+                }
+            }
+        }
+
+        // 단계 3 전용 JavaScript
+        let cropSystem = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const processedCalligraphyEl = document.getElementById('processedCalligraphy');
+            const nextToStep4 = document.getElementById('nextToStep4');
+            const reuploadBtn = document.getElementById('reuploadBtn');
+            const reuploadInput = document.getElementById('reuploadInput');
+            
+            // 데이터 복원
+            restoreData();
+            
+            // step3 페이지 강제 활성화
+            const step3El = document.getElementById('step3');
+            if (step3El) {
+                step3El.classList.add('active');
+            }
+            
+            // 이미지 로드 및 크롭 시스템 초기화 함수
+            function loadImageAndInitCrop() {
+                console.log('loadImageAndInitCrop 호출됨');
+                console.log('processedCalligraphy 상태:', processedCalligraphy ? '존재' : '없음');
+                
+                if (processedCalligraphy) {
+                    processedCalligraphyEl.src = processedCalligraphy;
+                    
+                    // 이미지 로드 후 크롭 시스템 초기화
+                    processedCalligraphyEl.onload = () => {
+                        console.log('이미지 로드 완료, 크롭 시스템 초기화 시작');
+                        try {
+                            if (cropSystem) {
+                                // 기존 크롭 시스템 정리
+                                cropSystem.destroy();
+                            }
+                            cropSystem = new CropSystem();
+                            cropSystem.init(processedCalligraphyEl);
+                            console.log('크롭 시스템 초기화 완료');
+                        } catch (error) {
+                            console.error('크롭 시스템 초기화 오류:', error);
+                            showModal('오류', '크롭 시스템 초기화 중 오류가 발생했습니다.');
+                        }
+                    };
+                    
+                    processedCalligraphyEl.onerror = () => {
+                        console.error('이미지 로드 실패');
+                        showModal('오류', '이미지 로드에 실패했습니다.');
+                    };
+                } else {
+                    console.log('글씨 이미지 없음');
+                    showModal('알림', '글씨 이미지가 없습니다. 이전 단계로 돌아가주세요.');
+                    setTimeout(() => {
+                        window.location.href = 'calligraphy-step2.html';
+                    }, 2000);
+                }
+            }
+            
+            // 초기 이미지 로드
+            loadImageAndInitCrop();
+            
+            // 이미지 재업로드 버튼 이벤트 (요소가 존재하는 경우에만)
+            if (reuploadBtn && reuploadInput) {
+                reuploadBtn.addEventListener('click', () => {
+                    reuploadInput.click();
+                });
+                
+                // 파일 재업로드 이벤트
+                reuploadInput.addEventListener('change', async () => {
+                    try {
+                        console.log('새 이미지 업로드 시작');
+                        const result = await handleFileUpload(reuploadInput, 'calligraphy');
+                        console.log('새 이미지 업로드 결과:', result);
+                        
+                        if (result.success && calligraphyImage && processedCalligraphy) {
+                            console.log('새 이미지로 업데이트됨');
+                            // 새 이미지로 업데이트
+                            loadImageAndInitCrop();
+                            showModal('완료', '새 이미지가 적용되었습니다!');
+                        } else {
+                            showModal('오류', '이미지 업로드 중 오류가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        console.error('이미지 재업로드 오류:', error);
+                        showModal('오류', `이미지 업로드 중 오류가 발생했습니다: ${error.message}`);
+                    }
+                });
+            } else {
+                console.log('재업로드 버튼 또는 입력 요소가 없습니다.');
+            }
+            
+            // 다음 버튼 이벤트
+            nextToStep4.addEventListener('click', async () => {
+                console.log('자르기 완료 버튼 클릭됨');
+                console.log('cropSystem 상태:', {
+                    cropSystem: cropSystem ? '존재' : '없음',
+                    cropper: cropSystem && cropSystem.cropper ? '존재' : '없음'
+                });
+                
+                if (cropSystem && cropSystem.cropper) {
+                    try {
+                        console.log('크롭된 이미지 생성 중...');
+                        const croppedImage = await cropSystem.getCroppedImage();
+                        console.log('크롭된 이미지 생성 결과:', croppedImage ? '성공' : '실패');
+                        
+                        if (croppedImage) {
+                            // 전역 변수에 저장
+                            if (typeof croppedCalligraphy === 'undefined') {
+                                window.croppedCalligraphy = croppedImage;
+                            } else {
+                                croppedCalligraphy = croppedImage;
+                            }
+                            
+                            console.log('크롭 완료, 데이터 저장 중...');
+                            await saveData();
+                            console.log('데이터 저장 완료, step4로 이동');
+                            window.location.href = 'calligraphy-step4.html';
+                        } else {
+                            console.log('크롭된 이미지 생성 실패');
+                            showModal('오류', '크롭된 이미지를 생성할 수 없습니다.');
+                        }
+                    } catch (error) {
+                        console.error('크롭 오류:', error);
+                        showModal('오류', `이미지 크롭 중 오류가 발생했습니다: ${error.message}`);
+                    }
+                } else {
+                    console.log('크롭 시스템 초기화 안됨');
+                    showModal('알림', '크롭 시스템이 초기화되지 않았습니다. 페이지를 새로고침해주세요.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘리그라피 합성기 - 글씨 이미지 업로드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jua', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="calligraphy-common.css">
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        </div>
+    </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+    </div>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-button" onclick="goBack()" style="display: block;">←</button>
+
+    <!-- 단계 2: 글씨 이미지 업로드 -->
+    <div class="step active" id="step2">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">글씨 사진 업로드</h1>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="control-panel">
+                    <h2 class="text-xl mb-4 text-center">2. 글씨 사진 업로드</h2>
+                    <div class="file-upload-area" onclick="document.getElementById('calligraphyInput').click()">
+                        <div class="text-6xl mb-4">✍️</div>
+                        <p class="text-lg mb-2">글씨 사진을 선택하세요</p>
+                        <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                        <input type="file" id="calligraphyInput" accept="image/*" style="display: none;">
+                    </div>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 커스텀 모달 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-modal-content">
+            <h3 id="modalTitle">알림</h3>
+            <p id="modalMessage">메시지가 여기에 표시됩니다.</p>
+            <div>
+                <button id="modalConfirm" onclick="closeModal()">확인</button>
+                <button id="modalCancel" onclick="closeModal()" class="secondary" style="display: none;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="calligraphy-common.js"></script>
+    <script>
+        // 단계 2 전용 JavaScript
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Step 2 페이지 로드됨');
+            const calligraphyInput = document.getElementById('calligraphyInput');
+            const calligraphyUploadArea = document.querySelector('.file-upload-area');
+            
+            console.log('요소들:', {
+                calligraphyInput: calligraphyInput ? '찾음' : '없음',
+                calligraphyUploadArea: calligraphyUploadArea ? '찾음' : '없음'
+            });
+            
+            // 파일 입력 이벤트 - 업로드 후 자동으로 다음 단계로 이동
+            calligraphyInput.addEventListener('change', async () => {
+                console.log('파일 선택됨, 업로드 시작');
+                try {
+                    const result = await handleFileUpload(calligraphyInput, 'calligraphy');
+                    console.log('업로드 결과:', result);
+                    
+                    // 업로드 완료 후 자동으로 다음 단계로 이동
+                    if (result.success && calligraphyImage && processedCalligraphy) {
+                        console.log('업로드 완료, step3로 자동 이동');
+                        await saveData();
+                        window.location.href = 'calligraphy-step3.html';
+                    } else {
+                        console.log('업로드 실패 - 데이터 없음');
+                        showModal('오류', '이미지 처리 중 오류가 발생했습니다.');
+                    }
+                } catch (error) {
+                    console.error('업로드 오류:', error);
+                    showModal('오류', `이미지 업로드 중 오류가 발생했습니다: ${error.message}`);
+                }
+            });
+            
+            // 드래그 앤 드롭 설정
+            setupDragAndDrop(calligraphyUploadArea, calligraphyInput);
+            
+            // 데이터 복원
+            restoreData();
+            console.log('복원된 데이터:', {
+                calligraphyImage: calligraphyImage ? '있음' : '없음',
+                processedCalligraphy: processedCalligraphy ? '있음' : '없음'
+            });
+            
+            // step2 페이지 강제 활성화
+            const step2El = document.getElementById('step2');
+            if (step2El) {
+                step2El.classList.add('active');
+                console.log('step2 요소 활성화됨');
+            }
+            
+            // 이미 글씨 이미지가 있다면 자동으로 다음 단계로 이동
+            if (calligraphyImage && processedCalligraphy) {
+                console.log('이미 업로드된 글씨 이미지 있음, step3로 자동 이동');
+                setTimeout(() => {
+                    window.location.href = 'calligraphy-step3.html';
+                }, 1000); // 1초 후 이동
+            }
+        });
+    </script>
+</body>
+</html>

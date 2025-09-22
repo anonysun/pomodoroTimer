@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>캘리그라피 합성기 - 배경 이미지 업로드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jua', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="calligraphy-common.css">
+</head>
+<body>
+    <!-- 햄버거 메뉴 버튼 및 메뉴 -->
+    <div id="menu-hamburger" style="position:fixed;top:24px;right:28px;z-index:9999;cursor:pointer;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border-radius:50%;transition:background 0.18s;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+            <span class="menu-bar" style="display:block;height:4px;width:100%;background:#fff;border-radius:2px;"></span>
+        </div>
+    </div>
+    <div id="menu-popup" style="display:none;position:fixed;top:70px;right:32px;z-index:10000;background:#fff;border-radius:16px;box-shadow:0 4px 24px #0003;padding:18px 28px 14px 28px;min-width:180px;text-align:left;">
+    </div>
+
+    <!-- 뒤로가기 버튼 -->
+    <button class="back-button" onclick="goBack()" style="display: none;">←</button>
+
+    <!-- 단계 1: 배경 이미지 업로드 -->
+    <div class="step active" id="step1">
+        <div class="container mx-auto px-4 py-4">
+            <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
+            <div class="text-center mb-4">
+                <span class="text-sm text-gray-300">v0.13</span>
+            </div>
+            
+            <div class="max-w-2xl mx-auto">
+                <div class="control-panel">
+                    <h2 class="text-xl mb-4 text-center">1. 배경 사진 업로드</h2>
+                    <div class="file-upload-area" id="backgroundUploadArea" onclick="document.getElementById('backgroundInput').click()">
+                        <div class="text-6xl mb-4">🖼️</div>
+                        <p class="text-lg mb-2">배경 사진을 선택하세요</p>
+                        <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                        <input type="file" id="backgroundInput" accept="image/*" style="display: none;">
+                    </div>
+                    <div id="backgroundCheckArea" class="mt-4" style="display: none;">
+                        <div class="text-center flex flex-col items-center justify-center">
+                            <div class="check-icon mb-4 flex justify-center">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="12" cy="12" r="10" fill="#10B981" stroke="#10B981" stroke-width="2"/>
+                                    <path d="M8 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <p class="text-green-600 font-semibold text-center">배경 이미지가 업로드되었습니다!</p>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 커스텀 모달 -->
+    <div class="custom-modal" id="customModal">
+        <div class="custom-modal-content">
+            <h3 id="modalTitle">알림</h3>
+            <p id="modalMessage">메시지가 여기에 표시됩니다.</p>
+            <div>
+                <button id="modalConfirm" onclick="closeModal()">확인</button>
+                <button id="modalCancel" onclick="closeModal()" class="secondary" style="display: none;">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="calligraphy-common.js"></script>
+    <script>
+        // 단계 1 전용 JavaScript
+        document.addEventListener('DOMContentLoaded', () => {
+            const backgroundInput = document.getElementById('backgroundInput');
+            const backgroundUploadArea = document.getElementById('backgroundUploadArea');
+            
+            // 파일 입력 이벤트 - 업로드 후 자동으로 다음 단계로 이동
+            backgroundInput.addEventListener('change', async () => {
+                console.log('파일 선택됨, 업로드 시작');
+                
+                // 즉시 로딩 상태 표시
+                const backgroundUploadArea = document.getElementById('backgroundUploadArea');
+                if (backgroundUploadArea) {
+                    backgroundUploadArea.innerHTML = `
+                        <div class="text-6xl mb-4">⏳</div>
+                        <p class="text-lg mb-2">이미지 처리 중...</p>
+                        <p class="text-gray-600">잠시만 기다려주세요</p>
+                    `;
+                }
+                
+                try {
+                    const result = await handleFileUpload(backgroundInput, 'background');
+                    console.log('업로드 결과:', result);
+                    
+                    // 업로드 완료 후 자동으로 다음 단계로 이동
+                    if (result.success && backgroundImage) {
+                        console.log('업로드 완료, step2로 자동 이동');
+                        await saveData();
+                        // 즉시 이동 (지연 없음)
+                        window.location.href = 'calligraphy-step2.html';
+                    } else {
+                        console.log('업로드 실패 - 데이터 없음');
+                        showModal('오류', '이미지 처리 중 오류가 발생했습니다.');
+                        // 실패 시 원래 상태로 복원
+                        if (backgroundUploadArea) {
+                            backgroundUploadArea.innerHTML = `
+                                <div class="text-6xl mb-4">🖼️</div>
+                                <p class="text-lg mb-2">배경 사진을 선택하세요</p>
+                                <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                            `;
+                        }
+                    }
+                } catch (error) {
+                    console.error('업로드 오류:', error);
+                    showModal('오류', `이미지 업로드 중 오류가 발생했습니다: ${error.message}`);
+                    // 실패 시 원래 상태로 복원
+                    if (backgroundUploadArea) {
+                        backgroundUploadArea.innerHTML = `
+                            <div class="text-6xl mb-4">🖼️</div>
+                            <p class="text-lg mb-2">배경 사진을 선택하세요</p>
+                            <p class="text-gray-600">클릭하거나 드래그하여 업로드</p>
+                        `;
+                    }
+                }
+            });
+            
+            // 드래그 앤 드롭 설정
+            setupDragAndDrop(backgroundUploadArea, backgroundInput);
+            
+            
+            // 데이터 복원
+            restoreData();
+            
+            // step1 페이지 강제 활성화
+            const step1El = document.getElementById('step1');
+            if (step1El) {
+                step1El.classList.add('active');
+            }
+            
+            // 배경 이미지가 이미 있다면 자동으로 다음 단계로 이동
+            if (backgroundImage) {
+                console.log('이미 업로드된 배경 이미지 있음, step2로 자동 이동');
+                // 즉시 이동 (지연 없음)
+                window.location.href = 'calligraphy-step2.html';
+            }
+        });
+    </script>
+</body>
+</html>
