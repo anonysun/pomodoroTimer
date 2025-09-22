@@ -986,7 +986,7 @@
         
         // 터치 디바운싱을 위한 변수들
         let touchEndDebounceTimer = null;
-        let touchEndDebounceDelay = 150; // 150ms 디바운싱
+        let touchEndDebounceDelay = 300; // 300ms 디바운싱 (모바일 안정성 향상)
         let lastTouchEndTime = 0;
         
         // 드래그 시작점 저장 (상대적 이동을 위해)
@@ -2332,6 +2332,18 @@
                 this.scale = Math.max(0.1, Math.min(5, scale));
                 this.updatePreview();
                 this.updateEditHandles();
+                
+                // 크기 조절 후 편집 핸들 강제 표시
+                setTimeout(() => {
+                    const editHandles = document.getElementById('editHandles');
+                    if (editHandles) {
+                        editHandles.style.display = 'block';
+                        editHandles.style.opacity = '1';
+                        editHandles.style.visibility = 'visible';
+                        editHandles.style.pointerEvents = 'auto';
+                        console.log('크기 조절 후 편집 핸들 강제 표시');
+                    }
+                }, 100);
             }
 
             // 회전 업데이트
@@ -2986,7 +2998,7 @@
                     
                     let newCropArea = { ...cropSystem.startCropArea };
                     
-                    // 리사이징 방향에 따른 처리
+                    // 리사이징 방향에 따른 처리 (안정성 개선)
                     switch(cropSystem.resizeHandle) {
                         case 'nw': // 왼쪽 위
                             newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
@@ -3003,10 +3015,12 @@
                             newCropArea.x = Math.max(0, cropSystem.startCropArea.x + deltaX);
                             newCropArea.width = Math.max(5, cropSystem.startCropArea.width - deltaX);
                             newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            // 좌하단 점 고정 (y 위치 변경하지 않음)
                             break;
                         case 'se': // 오른쪽 아래
                             newCropArea.width = Math.max(5, cropSystem.startCropArea.width + deltaX);
                             newCropArea.height = Math.max(5, cropSystem.startCropArea.height + deltaY);
+                            // 우하단 점 고정 (x, y 위치 변경하지 않음)
                             break;
                         case 'n': // 위
                             newCropArea.y = Math.max(0, cropSystem.startCropArea.y + deltaY);
@@ -3574,8 +3588,16 @@
             setTimeout(updateMobileViewportHeight, 100);
         });
         
-        // 버튼 이벤트
-        document.getElementById('nextToStep2').addEventListener('click', nextStep);
+        // 버튼 이벤트 (강화된 처리)
+        const nextToStep2Btn = document.getElementById('nextToStep2');
+        if (nextToStep2Btn) {
+            nextToStep2Btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('다음 단계 버튼 클릭됨');
+                nextStep();
+            });
+        }
         // 자르기 완료 버튼 이벤트 (강화된 처리)
         const nextToStep4Btn = document.getElementById('nextToStep4');
         if (nextToStep4Btn) {
@@ -3653,10 +3675,27 @@
                 }
             });
         }
-        document.getElementById('downloadBtn').addEventListener('click', downloadFinalImage);
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            location.reload();
-        });
+        // 다운로드 버튼 이벤트 (강화된 처리)
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('다운로드 버튼 클릭됨');
+                downloadFinalImage();
+            });
+        }
+        
+        // 재시작 버튼 이벤트 (강화된 처리)
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('재시작 버튼 클릭됨');
+                location.reload();
+            });
+        }
         
         // 파일 드래그 앤 드롭
         document.querySelectorAll('.file-upload-area').forEach(area => {
