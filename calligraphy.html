@@ -802,7 +802,7 @@
         <div class="container mx-auto px-4 py-4">
             <h1 class="text-3xl text-center text-white mb-8">캘리그라피 합성기</h1>
             <div class="text-center mb-4">
-                <span class="text-sm text-gray-300">v0.11</span>
+                <span class="text-sm text-gray-300">v0.12</span>
             </div>
             
             <div class="max-w-2xl mx-auto">
@@ -1024,19 +1024,29 @@
         const modalConfirm = document.getElementById('modalConfirm');
         const modalCancel = document.getElementById('modalCancel');
         
-        // 이미지 압축 함수
-        function compressImage(file, maxWidth = 1200, quality = 0.8) {
+        // 이미지 압축 함수 (v2.1.0 성능-품질 균형)
+        function compressImage(file, maxWidth = 1000, quality = 0.9) {
             return new Promise((resolve) => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 const img = new Image();
                 
                 img.onload = () => {
+                    const originalSize = { width: img.width, height: img.height };
                     const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
                     canvas.width = img.width * ratio;
                     canvas.height = img.height * ratio;
                     
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    console.log('이미지 압축 완료 (성능-품질 균형):', {
+                        original: originalSize,
+                        compressed: { width: canvas.width, height: canvas.height },
+                        ratio: ratio,
+                        maxWidth: maxWidth,
+                        quality: quality,
+                        fileSizeReduction: `${Math.round((1 - ratio) * 100)}%`
+                    });
                     
                     canvas.toBlob(resolve, 'image/jpeg', quality);
                 };
@@ -2273,8 +2283,8 @@
                             ctx.drawImage(calligraphyImg, -finalWidth / 2, -finalHeight / 2, finalWidth, finalHeight);
                             ctx.restore();
                             
-                            // 모바일 호환 다운로드
-                            const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+                            // 모바일 호환 다운로드 (v2.1.0 품질 개선)
+                            const dataURL = canvas.toDataURL('image/jpeg', 0.95);
                             const fileName = 'calligraphy-composite.jpg';
                             
                             // 모바일 감지
