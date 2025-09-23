@@ -110,11 +110,22 @@ function processImage(imageData, type) {
         const img = new Image();
         
         img.onload = () => {
+            // 원본 이미지 크기 그대로 사용 (압축하지 않음)
             canvas.width = img.width;
             canvas.height = img.height;
             
+            console.log('이미지 처리 크기:', {
+                type: type,
+                originalWidth: img.width,
+                originalHeight: img.height,
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height
+            });
+            
             if (type === 'calligraphy') {
-                // 글씨 이미지 보정
+                // 글씨 이미지 보정 (원본 크기 그대로 그리기)
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.drawImage(img, 0, 0);
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = imageData.data;
@@ -368,9 +379,9 @@ function compressImage(imageData, quality = 0.8) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            // 이미지 크기를 줄여서 압축
-            const maxWidth = 800;
-            const maxHeight = 600;
+            // 이미지 크기를 줄여서 압축 (더 큰 크기 허용)
+            const maxWidth = 1200;
+            const maxHeight = 1200;
             let { width, height } = img;
             
             if (width > maxWidth || height > maxHeight) {
@@ -393,11 +404,12 @@ function compressImage(imageData, quality = 0.8) {
 // 데이터 저장
 async function saveData() {
     try {
-        // 이미지 데이터 압축
-        const compressedBackground = backgroundImage ? await compressImage(backgroundImage, 0.7) : null;
-        const compressedCalligraphy = calligraphyImage ? await compressImage(calligraphyImage, 0.7) : null;
-        const compressedProcessed = processedCalligraphy ? await compressImage(processedCalligraphy, 0.7) : null;
-        const compressedCropped = croppedCalligraphy ? await compressImage(croppedCalligraphy, 0.7) : null;
+        // 이미지 데이터 압축 (고품질로 압축)
+        const compressedBackground = backgroundImage ? await compressImage(backgroundImage, 0.9) : null;
+        const compressedCalligraphy = calligraphyImage ? await compressImage(calligraphyImage, 0.9) : null;
+        const compressedProcessed = processedCalligraphy ? await compressImage(processedCalligraphy, 0.9) : null;
+        // 크롭된 이미지는 압축하지 않음 (고품질 유지)
+        const compressedCropped = croppedCalligraphy;
         
         const data = {
             backgroundImage: compressedBackground,
