@@ -18,7 +18,21 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="calligraphy-common.css">
-    <script src="https://unpkg.com/fabric@4.6.0/dist/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"></script>
+    <script>
+        // Fabric.js 로딩 확인
+        if (typeof fabric === 'undefined') {
+            console.error('Fabric.js 로딩 실패');
+            // 대체 CDN 시도
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/fabric@4.6.0/dist/fabric.min.js';
+            script.onerror = function() {
+                console.error('모든 CDN에서 Fabric.js 로딩 실패');
+                alert('라이브러리 로딩에 실패했습니다. 페이지를 새로고침해주세요.');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
 </head>
 <body>
     <!-- 햄버거 메뉴 버튼 및 메뉴 -->
@@ -973,9 +987,10 @@
                 processedCalligraphy: processedCalligraphy ? '있음' : '없음'
             });
             
-            // Fabric.js 합성 시스템 초기화
+            // Fabric.js 합성 시스템 초기화 (데이터가 없어도 초기화)
+            compositeSystem = new FabricCompositeSystem();
+            
             if (backgroundImage && croppedCalligraphy) {
-                compositeSystem = new FabricCompositeSystem();
                 
                 // 저장된 위치 정보 적용 (Fabric.js 객체에 직접 적용)
                 setTimeout(() => {
@@ -999,10 +1014,8 @@
                 }, 1000); // 이미지 로딩 완료 대기
                 
             } else {
-                showModal('알림', '합성할 이미지가 없습니다. 이전 단계로 돌아가주세요.');
-                setTimeout(() => {
-                    window.location.href = 'calligraphy-step1.html';
-                }, 2000);
+                // 데이터가 없을 때는 step1으로 이동하지 않고 대기
+                console.log('데이터가 없습니다. 사용자가 이미지를 업로드할 때까지 대기합니다.');
             }
             
             // 데이터 저장 (위치 변경 시)
